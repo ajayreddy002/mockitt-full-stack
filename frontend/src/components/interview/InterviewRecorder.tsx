@@ -16,7 +16,7 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
   sessionId,
   questionId,
   settings,
-  onTranscriptionUpdate
+  // onTranscriptionUpdate
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -124,11 +124,11 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleSpeechResult = (transcription: string) => {
-    if (onTranscriptionUpdate) {
-      onTranscriptionUpdate(transcription);
-    }
-  };
+  // const handleSpeechResult = (transcription: string) => {
+  //   if (onTranscriptionUpdate) {
+  //     onTranscriptionUpdate(transcription);
+  //   }
+  // };
 
   if (!hasPermission) {
     return (

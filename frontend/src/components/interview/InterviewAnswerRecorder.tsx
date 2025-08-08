@@ -23,8 +23,6 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
 }) => {
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(settings.recordAudio);
   const [videoEnabled, setVideoEnabled] = useState(settings.recordVideo);
@@ -81,7 +79,6 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      setIsPaused(false);
       stopTimer();
 
       // Stop all tracks

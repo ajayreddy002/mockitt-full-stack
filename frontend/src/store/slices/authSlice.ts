@@ -35,8 +35,7 @@ export const authSlice: StateCreator<
   [['zustand/immer', never]],
   [],
   AuthSlice
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-> = (set, get) => ({
+> = (set) => ({
   // Initial state
   user: null,
   token: null,

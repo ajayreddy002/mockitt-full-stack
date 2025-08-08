@@ -333,8 +333,7 @@ export const interviewSlice: StateCreator<
   },
 
   stopTimer: () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    set((state) => {
+    set(() => {
       // Timer stopped, keep current value
     });
   },
