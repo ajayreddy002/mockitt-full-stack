@@ -1,0 +1,20 @@
+# In your root mockitt-platform directory
+# Create docker-compose.yml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: mockitt_db
+      POSTGRES_USER: ajay
+      POSTGRES_PASSWORD: Ajay@002
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+
+# Start the database
+# docker-compose up -d postgres

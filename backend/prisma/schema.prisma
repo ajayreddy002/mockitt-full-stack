@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PROD_DB_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole @default(STUDENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  resumes          Resume[]
+  interviews       Interview[]
+  progress         UserProgress[]
+  InterviewSession InterviewSession[]
+
+  @@map("users")
+}
+
+model Resume {
+  id            String  @id @default(cuid())
+  fileName      String
+  originalName  String
+  filePath      String
+  fileSize      Int
+  mimeType      String
+  extractedText String?
+
+  // Analysis results
+  analysisScore Float?
+  atsScore      Float?
+  skillsFound   String[]
+  skillsGaps    String[]
+  suggestions   Json?
+  strengths     String[]
+  improvements  String[]
+
+  // Metadata
+  isAnalyzed Boolean   @default(false)
+  analyzedAt DateTime?
+  version    Int       @default(1)
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("resumes")
+}
+
+model Interview {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("interviews")
+}
+
+model UserProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_progress")
+}
+
+// AI Analysis Results Storage
+model AiAnalysisResult {
+  id               String   @id @default(cuid())
+  spokenText       String
+  question         String
+  targetRole       String
+  industry         String
+  confidence       Int
+  clarity          Int
+  pace             Int
+  keywordRelevance Int
+  suggestions      String[] // Array of strings
+  strengths        String[] // Array of strings
+  improvementAreas String[] // Array of strings
+  provider         String   @default("gemini")
+  createdAt        DateTime @default(now())
+
+  @@map("ai_analysis_results")
+}
+
+// AI Generated Questions Storage
+model AiGeneratedQuestion {
+  id               String   @id @default(cuid())
+  question         String
+  type             String // behavioral, technical, situational, etc.
+  difficulty       String // easy, medium, hard
+  expectedDuration Int // in seconds
+  hints            String[] // Array of hints
+  tags             String[] // Array of tags
+  targetRole       String
+  industry         String
+  provider         String   @default("gemini")
+  createdAt        DateTime @default(now())
+
+  @@map("ai_generated_questions")
+}
+
+model InterviewSession {
+  id                   String          @id @default(cuid())
+  title                String
+  type                 InterviewType   @default(PRACTICE)
+  status               InterviewStatus @default(SCHEDULED)
+  questions            Json // Store AI-generated questions as JSON
+  settings             Json // Store interview settings
+  currentQuestionIndex Int             @default(0)
+  startTime            DateTime?
+  endTime              DateTime?
+  totalDuration        Int             @default(0) // in seconds
+  overallScore         Float? // calculated after completion
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  // Relations
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses InterviewResponse[]
+
+  @@map("interview_sessions")
+}
+
+model InterviewResponse {
+  id            String   @id @default(cuid())
+  questionId    String
+  question      String
+  transcription String?
+  audioUrl      String?
+  videoUrl      String?
+  duration      Int      @default(0) // in seconds
+  score         Float? // individual question score
+  analysis      Json? // AI analysis results
+  recordedAt    DateTime @default(now())
+
+  // Relations
+  sessionId String
+  session   InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("interview_responses")
+}
+
+// Enums
+enum InterviewType {
+  PRACTICE
+  FULL_MOCK
+  QUICK_PREP
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum UserRole {
+  STUDENT
+  MENTOR
+  ADMIN
+}
