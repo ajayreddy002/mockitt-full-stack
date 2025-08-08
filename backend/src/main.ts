@@ -1,14 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  const configService = new ConfigService();
+  const FRONTEND_URL = configService.get('FRONTEND_URL');
   // Enable CORS for frontend connection
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: FRONTEND_URL || 'http://localhost:5137',
     credentials: true,
   });
 

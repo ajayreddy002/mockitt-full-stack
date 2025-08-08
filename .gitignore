@@ -27,3 +27,7 @@ frontend/dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.yarn
+backend/.yarn
+backend/.yarn/*
+frontend/.yarn
