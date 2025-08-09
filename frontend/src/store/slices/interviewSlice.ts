@@ -2,55 +2,11 @@
 import { type StateCreator } from 'zustand';
 import { type RootState } from '../index';
 import { mockittAPI } from '../../services/api';
-
-export interface InterviewQuestion {
-  id: string;
-  question: string;
-  type: 'behavioral' | 'technical' | 'situational' | 'company-specific';
-  difficulty: 'easy' | 'medium' | 'hard';
-  expectedDuration: number;
-  hints: string[];
-  tags: string[];
-  followUpQuestions?: string[];
-  role: string;
-  industry: string;
-}
-
-export interface InterviewResponse {
-  id: string;
-  questionId: string;
-  question: string;
-  transcription?: string;
-  audioUrl?: string;
-  videoUrl?: string;
-  duration: number;
-  score?: number;
-  analysis?: any;
-  recordedAt: Date;
-}
-
-export interface InterviewSession {
-  id: string;
-  title: string;
-  type: 'PRACTICE' | 'FULL_MOCK' | 'QUICK_PREP';
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  questions: InterviewQuestion[];
-  settings: {
-    recordVideo: boolean;
-    recordAudio: boolean;
-    enableHints: boolean;
-    timePerQuestion: number;
-    industry: string;
-    role: string;
-  };
-  currentQuestionIndex: number;
-  startTime?: Date;
-  endTime?: Date;
-  totalDuration: number;
-  overallScore?: number;
-  responses: InterviewResponse[];
-  createdAt: Date;
-}
+import type {
+  InterviewSession,
+  InterviewQuestion,
+  InterviewResponse,
+} from '../../types/interview';
 
 export interface InterviewSlice {
   // State
@@ -58,12 +14,19 @@ export interface InterviewSlice {
   sessions: InterviewSession[];
   questions: InterviewQuestion[];
   responses: InterviewResponse[];
+  pendingResponses: InterviewResponse[]
   isRecording: boolean;
   isSessionActive: boolean;
   sessionLoading: boolean;
   questionBank: InterviewQuestion[];
   currentTimer: number;
   mediaStream: MediaStream | null;
+  questionAnswers: Record<string, {
+    transcription: string;
+    answerType: 'text' | 'audio';
+    duration: number;
+    lastUpdated: Date;
+  }>;
 
   // API Actions - All connected to backend
   fetchSessions: () => Promise<void>;
@@ -107,6 +70,12 @@ export interface InterviewSlice {
   generateRealTimeAnalysis: (transcription: string, questionId: string) => Promise<any>;
   generateInstantTips: (currentResponse: string) => Promise<string[]>;
   generateFollowUp: (questionId: string, response: string) => Promise<string>;
+  generateAdaptiveQuestion: (previousResponses: any[], targetRole: string, weakAreas: string[]) => Promise<any>;
+  savePendingResponse: (response: Partial<InterviewResponse>) => void;
+  submitAllResponses: (sessionId: string) => Promise<void>;
+  saveQuestionAnswer: (questionId: string, answer: any) => void;
+  getQuestionAnswer: (questionId: string) => any | null;
+  clearQuestionAnswers: () => void;
 }
 
 export const interviewSlice: StateCreator<
@@ -120,12 +89,14 @@ export const interviewSlice: StateCreator<
   sessions: [],
   questions: [],
   responses: [],
+  pendingResponses: [],
   isRecording: false,
   isSessionActive: false,
   sessionLoading: false,
   questionBank: [],
   currentTimer: 0,
   mediaStream: null,
+  questionAnswers: {},
 
   // ✅ API Actions - All connected to your NestJS backend
   fetchSessions: async () => {
@@ -409,6 +380,98 @@ export const interviewSlice: StateCreator<
       get().handleApiError(error, 'generateFollowUp');
       return '';
     }
-  }
+  },
+  generateAdaptiveQuestion: async (previousResponses: any[], targetRole: string, weakAreas: string[]) => {
+    try {
+      const currentSession = get().currentSession;
+      if (!currentSession) return null;
+
+      const adaptiveQuestionData = await mockittAPI.ai.generateAdaptiveQuestion({
+        previousResponses,
+        targetRole,
+        difficulty: 'medium',
+        weakAreas
+      });
+
+      return adaptiveQuestionData;
+    } catch (error) {
+      get().handleApiError(error, 'generateAdaptiveQuestion');
+      return null;
+    }
+  },
+  savePendingResponse: (response: Partial<InterviewResponse>) => {
+    set((state) => {
+      const existingIndex = state.pendingResponses.findIndex(
+        r => r.questionId === response.questionId
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing response
+        state.pendingResponses[existingIndex] = {
+          ...state.pendingResponses[existingIndex],
+          ...response
+        };
+      } else {
+        // Add new response
+        state.pendingResponses.push({
+          id: `temp-${Date.now()}`,
+          questionId: response.questionId!,
+          question: response.question!,
+          transcription: response.transcription || '',
+          duration: response.duration || 0,
+          recordedAt: new Date(),
+          ...response
+        } as InterviewResponse);
+      }
+    });
+  },
+
+  submitAllResponses: async (sessionId: string) => {
+    const responses = get().pendingResponses;
+    
+    if (responses.length === 0) return;
+
+    try {
+      // Send batch API request
+      await mockittAPI.interviews.submitBatchResponses(sessionId, responses);
+      
+      // Clear pending responses after successful submission
+      set((state) => {
+        state.pendingResponses = [];
+      });
+      
+      get().addNotification({
+        type: 'success',
+        title: 'Interview Completed!',
+        message: `Successfully submitted ${responses.length} responses.`
+      });
+    } catch (error) {
+      get().handleApiError(error, 'submitAllResponses');
+      throw error;
+    }
+  },
+  saveQuestionAnswer: (questionId: string, answer: any) => {
+    set((state) => {
+      state.questionAnswers[questionId] = {
+        transcription: answer.transcription || '',
+        answerType: answer.answerType || 'text',
+        duration: answer.duration || 0,
+        lastUpdated: new Date()
+      };
+    });
+  },
+
+  // ✅ Get specific question answer
+  getQuestionAnswer: (questionId: string) => {
+    const state = get();
+    return state.questionAnswers[questionId] || null;
+  },
+
+  // ✅ Clear all answers (for new session)
+  clearQuestionAnswers: () => {
+    set((state) => {
+      state.questionAnswers = {};
+    });
+  },
 
 });

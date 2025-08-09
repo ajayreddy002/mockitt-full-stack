@@ -136,6 +136,12 @@ export const mockittAPI = {
       const response = await api.get(`/interviews/sessions/${sessionId}/results`);
       return response.data;
     },
+    submitBatchResponses: async (sessionId: string, responses: any[]) => {
+      const response = await api.post(`/interviews/sessions/${sessionId}/responses/batch`, {
+        responses
+      });
+      return response.data;
+    },
   },
 
   // AI services
@@ -195,6 +201,15 @@ export const mockittAPI = {
       audioUrl?: string;
     }) => {
       const response = await api.post('/ai/speech/analyze', speechData);
+      return response.data;
+    },
+    generateAdaptiveQuestion: async (questionData: {
+      previousResponses: any[];
+      targetRole: string;
+      difficulty: string;
+      weakAreas: string[];
+    }) => {
+      const response = await api.post('/ai/questions/adaptive', questionData);
       return response.data;
     },
   },

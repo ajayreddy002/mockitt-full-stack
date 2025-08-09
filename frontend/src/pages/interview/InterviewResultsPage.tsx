@@ -34,6 +34,7 @@ export const InterviewResultsPage: React.FC = () => {
     };
 
     fetchResults();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, getSessionResults]);
 
   if (loading) {

@@ -496,4 +496,76 @@ export class InterviewsService {
       nextSteps,
     };
   }
+  async submitBatchResponses(
+    sessionId: string,
+    responses: any[],
+  ): Promise<{
+    success: boolean;
+    submittedCount: number;
+    sessionId: string;
+  }> {
+    try {
+      const session = await this.prisma.interviewSession.findUnique({
+        where: { id: sessionId },
+      });
+
+      if (!session) {
+        throw new NotFoundException('Interview session not found');
+      }
+
+      // Process each response with AI analysis
+      const processedResponses = await Promise.all(
+        responses.map(async (responseData) => {
+          let analysis = null;
+          let score = null;
+
+          // Get AI analysis if transcription exists
+          if (responseData.transcription) {
+            const aiAnalysis = await this.aiService.analyzeResponseRealTime({
+              spokenText: responseData.transcription,
+              currentQuestion: responseData.question,
+              targetRole: (session.settings as any).role || 'General',
+              industry: (session.settings as any).industry || 'Technology',
+            });
+
+            analysis = aiAnalysis.data;
+            score = aiAnalysis.data?.confidence || null;
+          }
+
+          return {
+            sessionId,
+            questionId: responseData.questionId,
+            question: responseData.question,
+            transcription: responseData.transcription,
+            audioUrl: responseData.audioUrl,
+            videoUrl: responseData.videoUrl,
+            duration: responseData.duration,
+            score,
+            analysis,
+          };
+        }),
+      );
+
+      // Batch insert all responses to database
+      await this.prisma.interviewResponse.createMany({
+        data: processedResponses,
+      });
+
+      this.logger.log(
+        `Submitted ${responses.length} responses for session ${sessionId}`,
+      );
+
+      return {
+        success: true,
+        submittedCount: responses.length,
+        sessionId,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Failed to submit batch responses: ${error.message}`);
+      throw new BadRequestException('Failed to submit batch responses');
+    }
+  }
 }

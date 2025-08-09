@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -88,5 +89,22 @@ export class AiController {
   async analyzeSpeech(@Body() speechData: SpeechAnalysisDto) {
     this.logger.log(`Speech analysis requested`);
     return this.aiService.analyzeSpeechPatterns(speechData);
+  }
+  @Post('questions/adaptive')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Generate adaptive follow-up question' })
+  async generateAdaptiveQuestion(
+    @Body(ValidationPipe)
+    questionData: {
+      previousResponses: any[];
+      targetRole: string;
+      difficulty: string;
+      weakAreas: string[];
+    },
+  ) {
+    this.logger.log(
+      `Adaptive question requested for role: ${questionData.targetRole}`,
+    );
+    return this.aiService.generateAdaptiveQuestion(questionData);
   }
 }

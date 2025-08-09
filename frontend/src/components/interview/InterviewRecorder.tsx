@@ -36,6 +36,7 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
         stream.getTracks().forEach(track => track.stop());
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initializeCamera = async () => {
@@ -123,7 +124,7 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   // const handleSpeechResult = (transcription: string) => {
   //   if (onTranscriptionUpdate) {
   //     onTranscriptionUpdate(transcription);

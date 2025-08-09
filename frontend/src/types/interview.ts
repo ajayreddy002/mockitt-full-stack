@@ -1,27 +1,43 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// frontend/src/types/interview.ts - Create a shared types file
+export type InterviewType = 'PRACTICE' | 'FULL_MOCK' | 'QUICK_PREP';
+export type InterviewStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
 export interface InterviewQuestion {
   id: string;
   question: string;
   type: 'behavioral' | 'technical' | 'situational' | 'company-specific';
   difficulty: 'easy' | 'medium' | 'hard';
-  industry?: string;
-  role?: string;
-  expectedDuration: number; // in seconds
-  hints?: string[];
+  expectedDuration: number;
+  hints: string[];
+  tags: string[];
   followUpQuestions?: string[];
-  tags?: string[];
+  role: string;
+  industry: string;
 }
 
+export interface InterviewResponse {
+  id: string;
+  questionId: string;
+  question: string;
+  transcription?: string;
+  audioUrl?: string;
+  videoUrl?: string;
+  duration: number;
+  score?: number;
+  analysis?: any;
+  recordedAt: Date;
+  sessionId: string;
+}
+
+// ✅ Single, consistent InterviewSession interface
 export interface InterviewSession {
   id: string;
   userId: string;
   title: string;
-  type: 'practice' | 'full-mock' | 'quick-prep';
-  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  type: InterviewType;
+  status: InterviewStatus;
   questions: InterviewQuestion[];
-  currentQuestionIndex: number;
-  startTime?: Date;
-  endTime?: Date;
-  totalDuration: number;
   settings: {
     recordVideo: boolean;
     recordAudio: boolean;
@@ -30,42 +46,11 @@ export interface InterviewSession {
     industry: string;
     role: string;
   };
+  currentQuestionIndex: number;
+  startTime?: Date;
+  endTime?: Date;
+  totalDuration: number;
+  overallScore?: number;
+  responses: InterviewResponse[];
   createdAt: Date;
-}
-
-export interface InterviewResponse {
-  id: string;
-  sessionId: string;
-  questionId: string;
-  audioUrl?: string;
-  videoUrl?: string;
-  transcription?: string;
-  duration: number;
-  confidence?: number;
-  analysis?: {
-    clarity: number;
-    pace: number;
-    fillerWords: number;
-    keywordUsage: string[];
-    suggestions: string[];
-  };
-  recordedAt: Date;
-}
-
-export interface InterviewAnalytics {
-  sessionId: string;
-  overallScore: number;
-  strengths: string[];
-  improvements: string[];
-  questionPerformance: {
-    questionId: string;
-    score: number;
-    timeSpent: number;
-    feedback: string;
-  }[];
-  progressComparison?: {
-    previousSessions: string[];
-    improvement: number;
-    trends: string[];
-  };
 }

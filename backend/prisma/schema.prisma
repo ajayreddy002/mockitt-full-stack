@@ -159,6 +159,16 @@ model InterviewResponse {
   @@map("interview_responses")
 }
 
+model SpeechAnalysisResult {
+  id             String   @id @default(cuid())
+  sessionId      String
+  fullTranscript String
+  metrics        Json     // Store pace, clarity, confidence scores
+  createdAt      DateTime @default(now())
+  
+  @@map("speech_analysis_results")
+}
+
 // Enums
 enum InterviewType {
   PRACTICE

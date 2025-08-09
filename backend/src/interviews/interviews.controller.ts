@@ -140,4 +140,30 @@ export class InterviewsController {
   async getSessionResults(@Param('id') sessionId: string) {
     return this.interviewsService.generateSessionResults(sessionId);
   }
+  @Post('sessions/:id/responses/batch')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Submit multiple interview responses in batch' })
+  @ApiResponse({
+    status: 201,
+    description: 'Batch responses submitted successfully',
+  })
+  async submitBatchResponses(
+    @Param('id') sessionId: string,
+    @Body(ValidationPipe)
+    batchData: {
+      responses: Array<{
+        questionId: string;
+        question: string;
+        transcription?: string;
+        audioUrl?: string;
+        videoUrl?: string;
+        duration: number;
+      }>;
+    },
+  ) {
+    return this.interviewsService.submitBatchResponses(
+      sessionId,
+      batchData.responses,
+    );
+  }
 }

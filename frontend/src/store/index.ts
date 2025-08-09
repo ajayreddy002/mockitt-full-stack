@@ -110,6 +110,7 @@ export const useInterview = () => useStore(
     sessionLoading: state.sessionLoading,
     currentTimer: state.currentTimer,
     mediaStream: state.mediaStream,
+    questionAnswers: state.questionAnswers,
     createSession: state.createSession,
     startSession: state.startSession,
     endSession: state.endSession,
@@ -131,6 +132,11 @@ export const useInterview = () => useStore(
     updateSession: state.updateSession,
     deleteSession: state.deleteSession,
     getSession: state.getSession,
+    savePendingResponse: state.savePendingResponse,
+    submitAllResponses: state.submitAllResponses,
+    saveQuestionAnswer: state.saveQuestionAnswer,
+    getQuestionAnswer: state.getQuestionAnswer,
+    clearQuestionAnswers: state.clearQuestionAnswers,
   }))
 );
 

@@ -1,6 +1,7 @@
 export interface NavigationItem {
   name: string;
   path: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.ComponentType<any>;
   description?: string;
   badge?: string;

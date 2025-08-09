@@ -11,6 +11,7 @@ import {
   FollowUpDto,
   SpeechAnalysisDto,
 } from './dto';
+import { InterviewResponse } from '@prisma/client';
 
 interface GeminiResponse {
   candidates: Array<{
@@ -249,25 +250,25 @@ export class AiService {
   }
 
   private buildRealTimeAnalysisPrompt(data: RealTimeAnalysisDto): string {
-    return `Analyze this interview response for real-time coaching:
-
-Question: "${data.currentQuestion}"
-Response: "${data.spokenText}"
-Target Role: ${data.targetRole}
-Industry: ${data.industry}
-
-Provide immediate analysis as JSON:
-{
-  "confidence": 85,
-  "clarity": 90,
-  "pace": 75,
-  "keywordRelevance": 80,
-  "suggestions": ["immediate tip 1", "immediate tip 2"],
-  "strengths": ["what they did well"],
-  "improvementAreas": ["what to improve"]
-}
-
-Focus on actionable feedback they can apply immediately. Return ONLY the JSON object.`;
+    return `Analyze this interview response for real-time coaching.
+  
+  Question: "${data.currentQuestion}"
+  Response: "${data.spokenText}"
+  Target Role: ${data.targetRole}
+  Industry: ${data.industry}
+  
+  IMPORTANT: Return ONLY a valid JSON object without any markdown formatting or code blocks.
+  
+  Provide analysis as a clean JSON object:
+  {
+    "confidence": 85,
+    "clarity": 90,
+    "pace": 75,
+    "keywordRelevance": 80,
+    "suggestions": ["immediate tip 1", "immediate tip 2"],
+    "strengths": ["what they did well"],
+    "improvementAreas": ["what to improve"]
+  }`;
   }
 
   private buildCoachingPrompt(data: InstantCoachingDto): string {
@@ -329,7 +330,11 @@ Return only the follow-up question, no additional text.`;
 
   private parseAnalysisResponse(analysisText: string): any {
     try {
-      const cleanedText = analysisText.replace(/``````\n?/g, '').trim();
+      const cleanedText = analysisText
+        .replace(/```json\n?/g, '') // Remove ```
+        .replace(/```\n?/g, '') // Remove ```
+        .replace(/^`+|`+$/g, '') // Remove any leading/trailing backticks
+        .trim(); // Remove whitespace
       const parsed = JSON.parse(cleanedText);
 
       return {
@@ -356,7 +361,7 @@ Return only the follow-up question, no additional text.`;
 
   private parseCoachingTips(tipsText: string): string[] {
     try {
-      const cleanedText = tipsText.replace(/``````\n?/g, '').trim();
+      const cleanedText = this.cleanAIResponse(tipsText);
       const parsed = JSON.parse(cleanedText);
 
       if (Array.isArray(parsed)) {
@@ -375,7 +380,7 @@ Return only the follow-up question, no additional text.`;
     context: QuestionGenerationDto,
   ): any[] {
     try {
-      const cleanedText = questionsText.replace(/``````\n?/g, '').trim();
+      const cleanedText = this.cleanAIResponse(questionsText);
       const parsed = JSON.parse(cleanedText);
 
       if (Array.isArray(parsed)) {
@@ -535,5 +540,232 @@ Return only the follow-up question, no additional text.`;
     ];
 
     return baseQuestions.slice(0, context.count);
+  }
+  private analyzeResponseQuality(responses: InterviewResponse[]): {
+    averageScore: number;
+    consistencyScore: number;
+    progressionTrend: 'improving' | 'declining' | 'stable';
+    technicalDepth: number;
+    communicationClarity: number;
+  } {
+    if (responses.length === 0) {
+      return {
+        averageScore: 0,
+        consistencyScore: 0,
+        progressionTrend: 'stable',
+        technicalDepth: 0,
+        communicationClarity: 0,
+      };
+    }
+
+    // Calculate average confidence score from AI analysis
+    const validScores = responses
+      .filter((r: any) => r.analysis?.confidence)
+      .map((r: any) => r.analysis.confidence);
+
+    const averageScore =
+      validScores.length > 0
+        ? validScores.reduce((sum, score) => sum + score, 0) /
+          validScores.length
+        : 0;
+
+    // Calculate consistency (lower standard deviation = more consistent)
+    const variance =
+      validScores.length > 1
+        ? validScores.reduce(
+            (sum, score) => sum + Math.pow(score - averageScore, 2),
+            0,
+          ) /
+          (validScores.length - 1)
+        : 0;
+    const consistencyScore = Math.max(0, 100 - Math.sqrt(variance));
+
+    // Determine progression trend
+    let progressionTrend: 'improving' | 'declining' | 'stable' = 'stable';
+    if (validScores.length >= 3) {
+      const firstHalf = validScores.slice(
+        0,
+        Math.floor(validScores.length / 2),
+      );
+      const secondHalf = validScores.slice(Math.floor(validScores.length / 2));
+
+      const firstHalfAvg =
+        firstHalf.reduce((sum, score) => sum + score, 0) / firstHalf.length;
+      const secondHalfAvg =
+        secondHalf.reduce((sum, score) => sum + score, 0) / secondHalf.length;
+
+      if (secondHalfAvg > firstHalfAvg + 5) progressionTrend = 'improving';
+      else if (secondHalfAvg < firstHalfAvg - 5) progressionTrend = 'declining';
+    }
+
+    // Analyze technical depth from transcriptions
+    const technicalKeywords = [
+      'algorithm',
+      'database',
+      'architecture',
+      'framework',
+      'implementation',
+      'optimization',
+      'scalability',
+    ];
+    let technicalMentions = 0;
+    let totalWords = 0;
+
+    responses.forEach((response) => {
+      if (response.transcription) {
+        const words = response.transcription.toLowerCase().split(' ');
+        totalWords += words.length;
+        technicalMentions += technicalKeywords.filter((keyword) =>
+          words.some((word) => word.includes(keyword)),
+        ).length;
+      }
+    });
+
+    const technicalDepth =
+      totalWords > 0
+        ? Math.min(100, (technicalMentions / totalWords) * 1000)
+        : 0;
+
+    // Analyze communication clarity from speech patterns
+    let totalFillerWords = 0;
+    let totalResponseWords = 0;
+
+    responses.forEach((response: any) => {
+      if (response.analysis?.fillerWordCount) {
+        totalFillerWords += response.analysis.fillerWordCount;
+      }
+      if (response.transcription) {
+        totalResponseWords += response.transcription.split(' ').length;
+      }
+    });
+
+    const communicationClarity =
+      totalResponseWords > 0
+        ? Math.max(0, 100 - (totalFillerWords / totalResponseWords) * 100)
+        : 0;
+
+    return {
+      averageScore: Math.round(averageScore),
+      consistencyScore: Math.round(consistencyScore),
+      progressionTrend,
+      technicalDepth: Math.round(technicalDepth),
+      communicationClarity: Math.round(communicationClarity),
+    };
+  }
+  private parseAdaptiveQuestion(text: string): {
+    question: string;
+    difficulty: string;
+    followUpTriggers: string[];
+    expectedDuration: number;
+    type: string;
+    hints: string[];
+  } {
+    try {
+      // Clean the response text
+      const cleanedText = this.cleanAIResponse(text);
+
+      // Try to parse as JSON first
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanedText);
+      } catch (jsonError) {
+        // If JSON parsing fails, extract information manually
+        parsed = this.extractQuestionFromText(cleanedText);
+      }
+
+      return {
+        question:
+          parsed.question ||
+          'Can you elaborate on your experience with this technology?',
+        difficulty: parsed.difficulty || 'medium',
+        followUpTriggers: Array.isArray(parsed.followUpTriggers)
+          ? parsed.followUpTriggers
+          : [
+              'incomplete answer',
+              'needs clarification',
+              'technical depth required',
+            ],
+        expectedDuration: parsed.expectedDuration || 120,
+        type: parsed.type || 'follow-up',
+        hints: Array.isArray(parsed.hints)
+          ? parsed.hints
+          : [
+              'Provide specific examples',
+              'Explain your thought process',
+              'Mention relevant technologies',
+            ],
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to parse adaptive question: ${error.message}`);
+
+      // Return a fallback adaptive question
+      return {
+        question:
+          'Based on your previous response, can you provide more specific details about your approach?',
+        difficulty: 'medium',
+        followUpTriggers: ['needs_detail', 'clarification_required'],
+        expectedDuration: 90,
+        type: 'clarification',
+        hints: [
+          'Use the STAR method (Situation, Task, Action, Result)',
+          'Include specific metrics or outcomes',
+          'Explain your decision-making process',
+        ],
+      };
+    }
+  }
+
+  // Helper method for manual text extraction
+  private extractQuestionFromText(text: string): any {
+    const lines = text.split('\n').filter((line) => line.trim());
+
+    return {
+      question:
+        lines
+          .find((line) => line.toLowerCase().includes('question'))
+          ?.replace(/question:?/i, '')
+          .trim() ||
+        lines[0] ||
+        'Can you tell me more about that?',
+      difficulty: text.toLowerCase().includes('advanced')
+        ? 'hard'
+        : text.toLowerCase().includes('basic')
+          ? 'easy'
+          : 'medium',
+      type: text.toLowerCase().includes('technical')
+        ? 'technical'
+        : text.toLowerCase().includes('behavioral')
+          ? 'behavioral'
+          : 'follow-up',
+    };
+  }
+  async generateAdaptiveQuestion(data: {
+    previousResponses: InterviewResponse[];
+    targetRole: string;
+    difficulty: string;
+    weakAreas: string[];
+  }) {
+    const prompt = `Based on previous responses, generate a follow-up question that:
+    1. Addresses weak areas: ${data.weakAreas.join(', ')}
+    2. Matches difficulty progression for ${data.targetRole}
+    3. Builds on previous answers for deeper assessment
+    
+    Previous response quality: ${this.analyzeResponseQuality(data.previousResponses)}
+    
+    Return a single, targeted question with context.`;
+
+    const response = await this.callGeminiAPI(prompt);
+    return this.parseAdaptiveQuestion(response);
+  }
+  private cleanAIResponse(text: string): string {
+    if (!text || typeof text !== 'string') {
+      throw new Error('Invalid response text');
+    }
+
+    return text
+      .replace(/```json\n?/gi, '') // Remove ```
+      .replace(/```\w*\n?/g, '') // Remove any code fence with language
+      .replace(/^`+|`+$/g, '') // Remove leading/trailing backticks
+      .trim(); // Remove whitespace
   }
 }

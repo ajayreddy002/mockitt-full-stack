@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Video, VideoOff, Play, Square, RotateCcw } from 'lucide-react';
+import { useInterview, useUI } from '../../store';
+import { debounce } from 'lodash';
 
 interface InterviewAnswerRecorderProps {
   sessionId: string;
@@ -21,6 +23,8 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
   settings,
   onAnswerSaved
 }) => {
+  const { addNotification } = useUI();
+  const { saveQuestionAnswer, getQuestionAnswer } = useInterview();
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -30,7 +34,8 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
   // Transcription and response
   const [currentTranscription, setCurrentTranscription] = useState('');
   const [writtenAnswer, setWrittenAnswer] = useState('');
-  const [answerMode, setAnswerMode] = useState<'record' | 'text'>('record');
+  const [answerMode, setAnswerMode] = useState<'record' | 'text'>('text');
+  const [isEditing, setIsEditing] = useState(false);
 
   // Recording references
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -47,7 +52,7 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
+
       if (videoRef.current && videoEnabled) {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
@@ -65,7 +70,7 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
 
       mediaRecorder.onstop = handleRecordingStop;
       mediaRecorder.start();
-      
+
       setIsRecording(true);
       startTimer();
     } catch (error) {
@@ -93,7 +98,7 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
   // Handle recording completion
   const handleRecordingStop = async () => {
     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-    
+
     // Here you would typically:
     // 1. Upload the audio blob to your backend
     // 2. Get transcription from speech-to-text service
@@ -137,16 +142,30 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
   // Save written answer
   const saveWrittenAnswer = () => {
     if (writtenAnswer.trim()) {
-      const responseData = {
+      const answerData = {
         sessionId,
         questionId,
         question,
         transcription: writtenAnswer,
-        duration: 0,
-        answerType: 'text'
+        answerType: 'text',
+        duration: 0
       };
 
-      onAnswerSaved(responseData);
+      saveQuestionAnswer(questionId, {
+        transcription: writtenAnswer,
+        answerType: answerMode,
+        duration: 0
+      });
+
+      // ✅ Save locally instead of immediate API call
+      onAnswerSaved(answerData);
+
+      // Show confirmation
+      addNotification({
+        type: 'success',
+        title: 'Answer Saved!',
+        message: 'Your response has been recorded locally.'
+      });
     }
   };
 
@@ -166,30 +185,79 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
     };
   }, []);
 
+  useEffect(() => {
+    // Clear fields when question changes
+    setWrittenAnswer('');
+    setCurrentTranscription('');
+    setRecordingTime(0);
+    // Reset any recording state if needed
+  }, [questionId]);
+
+  useEffect(() => {
+    const storedAnswer = getQuestionAnswer(questionId);
+    if (storedAnswer) {
+      // ✅ Initialize with stored answer for THIS specific question
+      setWrittenAnswer(storedAnswer.transcription || '');
+      setAnswerMode(storedAnswer.answerType || 'text');
+      setIsEditing(true);
+    } else {
+      // ✅ Clear fields for new question
+      setWrittenAnswer('');
+      setAnswerMode('text');
+      setIsEditing(false);
+    }
+  }, [questionId, getQuestionAnswer]); 
+
+  // ✅ Auto-save draft as user types (debounced)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSave = useCallback(
+    debounce((questionId: string, answer: string, mode: string) => {
+      if (answer.trim()) {
+        saveQuestionAnswer(questionId, {
+          transcription: answer,
+          answerType: mode,
+          duration: 0
+        });
+      }
+    }, 1000),
+    [saveQuestionAnswer]
+  );
+
+  useEffect(() => {
+    if (writtenAnswer) {
+      debouncedSave(questionId, writtenAnswer, answerMode);
+    }
+  }, [writtenAnswer, questionId, answerMode, debouncedSave]);
+
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">Your Answer</h3>
-        
+        <div className="flex items-center space-x-3">
+          <h3 className="text-xl font-semibold text-gray-900">Your Answer</h3>
+          {isEditing && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+              ✏️ Editing Saved Answer
+            </span>
+          )}
+        </div>
+
         {/* Answer Mode Toggle */}
         <div className="flex bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => setAnswerMode('record')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              answerMode === 'record'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${answerMode === 'record'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             🎤 Record
           </button>
           <button
             onClick={() => setAnswerMode('text')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              answerMode === 'text'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${answerMode === 'text'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             ✍️ Type
           </button>
@@ -221,11 +289,10 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
             <button
               onClick={() => setAudioEnabled(!audioEnabled)}
               disabled={isRecording}
-              className={`p-3 rounded-full transition-all ${
-                audioEnabled
-                  ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-              }`}
+              className={`p-3 rounded-full transition-all ${audioEnabled
+                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                }`}
             >
               {audioEnabled ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
             </button>
@@ -234,11 +301,10 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
             <button
               onClick={() => setVideoEnabled(!videoEnabled)}
               disabled={isRecording}
-              className={`p-3 rounded-full transition-all ${
-                videoEnabled
-                  ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-              }`}
+              className={`p-3 rounded-full transition-all ${videoEnabled
+                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                }`}
             >
               {videoEnabled ? <Video className="h-6 w-6" /> : <VideoOff className="h-6 w-6" />}
             </button>
@@ -297,20 +363,33 @@ export const InterviewAnswerRecorder: React.FC<InterviewAnswerRecorderProps> = (
             placeholder="Type your answer here..."
             className="w-full h-40 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-          
+
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
               {writtenAnswer.length} characters • {writtenAnswer.split(' ').length} words
             </p>
-            
+            {isEditing && (
+              <span className="text-xs text-blue-600">
+                Auto-saving as you type...
+              </span>
+            )}
+
             <button
               onClick={saveWrittenAnswer}
               disabled={!writtenAnswer.trim()}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg transition-colors font-medium"
             >
-              Save Answer
+              {isEditing ? 'Update Answer' : 'Save Answer'}
             </button>
           </div>
+          {/* Show previous answer summary if exists */}
+          {isEditing && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                💾 You have a saved answer for this question. You can edit it above or record a new one.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
