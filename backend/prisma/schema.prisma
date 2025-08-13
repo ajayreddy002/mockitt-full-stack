@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("PROD_DB_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -17,12 +17,18 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  profilePicture String?
+  isPremium Boolean? @default(false)
 
   // Relations
-  resumes          Resume[]
-  interviews       Interview[]
-  progress         UserProgress[]
-  InterviewSession InterviewSession[]
+  resumes              Resume[]
+  interviews           Interview[]
+  progress             UserProgress[]
+  InterviewSession     InterviewSession[]
+  QuizAttempt          QuizAttempt[]
+  AssignmentSubmission AssignmentSubmission[]
+  Enrollment           Enrollment[]
+  CourseReview         CourseReview[]
 
   @@map("users")
 }
@@ -163,10 +169,245 @@ model SpeechAnalysisResult {
   id             String   @id @default(cuid())
   sessionId      String
   fullTranscript String
-  metrics        Json     // Store pace, clarity, confidence scores
+  metrics        Json // Store pace, clarity, confidence scores
   createdAt      DateTime @default(now())
-  
+
   @@map("speech_analysis_results")
+}
+
+model Quiz {
+  id           String         @id @default(uuid())
+  moduleId     String
+  title        String
+  description  String?        @db.Text
+  type         QuizType       @default(MODULE_ASSESSMENT)
+  difficulty   QuizDifficulty @default(BEGINNER)
+  status       QuizStatus     @default(DRAFT)
+  duration     Int? // Duration in minutes
+  passingScore Int            @default(70) // Minimum score to pass
+  maxAttempts  Int            @default(3) // Maximum attempts allowed
+  isRandomized Boolean        @default(false) // Randomize question order
+  showResults  Boolean        @default(true) // Show results immediately
+  allowReview  Boolean        @default(true) // Allow reviewing answers
+  timeLimit    Boolean        @default(false) // Is time-limited
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  module    Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  QuizAttempt[]
+
+  @@index([moduleId, status])
+}
+
+model Question {
+  id            String         @id @default(uuid())
+  quizId        String
+  text          String         @db.Text
+  type          QuestionType   @default(MULTIPLE_CHOICE)
+  options       Json? // Store MCQ options as JSON array
+  correctAnswer Json // Store correct answer(s) as JSON
+  explanation   String?        @db.Text // Explanation for correct answer
+  points        Int            @default(1)
+  orderIndex    Int
+  difficulty    QuizDifficulty @default(BEGINNER)
+  tags          String[] // Topics/skills this question tests
+
+  quiz      Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  responses QuizResponse[]
+
+  @@index([quizId, orderIndex])
+}
+
+model Assignment {
+  id               String               @id @default(uuid())
+  moduleId         String
+  title            String
+  description      String               @db.Text
+  type             AssignmentType       @default(PROJECT)
+  difficulty       AssignmentDifficulty @default(BEGINNER)
+  status           AssignmentStatus     @default(DRAFT)
+  instructions     String               @db.Text
+  submissionTypes  SubmissionType[] // Multiple submission types allowed
+  maxFileSize      Int                  @default(10) // MB
+  allowedFileTypes FileType[] // Accepted file types
+  dueDate          DateTime?
+  isRequired       Boolean              @default(true)
+  maxPoints        Int                  @default(100)
+  rubric           Json? // Grading rubric as JSON
+  resources        Json? // Additional resources/links
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  module      Module                 @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@index([moduleId, status, dueDate])
+}
+
+model QuizAttempt {
+  id            String    @id @default(uuid())
+  userId        String
+  quizId        String
+  score         Int       @default(0)
+  maxScore      Int
+  passed        Boolean   @default(false)
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  timeSpent     Int? // Time spent in seconds
+  attemptNumber Int // Which attempt is this (1, 2, 3...)
+
+  user      User           @relation(fields: [userId], references: [id])
+  quiz      Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  responses QuizResponse[]
+
+  @@index([userId, quizId])
+}
+
+model QuizResponse {
+  id           String  @id @default(uuid())
+  attemptId    String
+  questionId   String
+  answer       Json // User's answer (varies by question type)
+  isCorrect    Boolean @default(false)
+  pointsEarned Int     @default(0)
+  timeSpent    Int? // Time spent on this question in seconds
+
+  attempt  QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+}
+
+model AssignmentSubmission {
+  id             String           @id @default(uuid())
+  userId         String
+  assignmentId   String
+  submissionType SubmissionType   @default(FILE_UPLOAD)
+  content        String?          @db.Text // Text submissions
+  fileUrls       String[] // Uploaded files
+  externalUrl    String? // External links (GitHub, portfolio, etc.)
+  submittedAt    DateTime         @default(now())
+  status         SubmissionStatus @default(NOT_STARTED)
+  gradingStatus  GradingStatus    @default(PENDING)
+  score          Int?
+  maxScore       Int?
+  feedback       String?          @db.Text
+  gradedAt       DateTime?
+  gradedBy       String? // Admin/instructor who graded
+
+  user       User       @relation(fields: [userId], references: [id])
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assignmentId])
+  @@index([userId, status])
+}
+
+// Course Management Models
+model Course {
+  id               String         @id @default(uuid())
+  title            String
+  description      String         @db.Text
+  shortDescription String?        @db.Text
+  thumbnailUrl     String?
+  level            CourseLevel    @default(BEGINNER)
+  category         CourseCategory
+  estimatedHours   Int            @default(0)
+  price            Decimal        @default(0)
+  isPremium        Boolean        @default(false)
+  isPublished      Boolean        @default(false)
+  tags             String[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Course structure
+  modules     Module[]
+  enrollments Enrollment[]
+  reviews     CourseReview[]
+
+  @@index([category, level, isPublished])
+}
+
+model Module {
+  id          String  @id @default(uuid())
+  courseId    String
+  title       String
+  description String? @db.Text
+  orderIndex  Int
+  isRequired  Boolean @default(true)
+
+  // Content types
+  lessons     Lesson[]
+  quizzes     Quiz[]
+  assignments Assignment[]
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, orderIndex])
+}
+
+model Lesson {
+  id          String      @id @default(uuid())
+  moduleId    String
+  title       String
+  content     String      @db.Text
+  contentType ContentType @default(TEXT)
+  contentUrl  String? // Video, PDF, or external resource URL
+  duration    Int         @default(0) // in minutes
+  orderIndex  Int
+  isRequired  Boolean     @default(true)
+
+  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([moduleId, orderIndex])
+}
+
+// Enrollment and Progress Tracking
+model Enrollment {
+  id              String    @id @default(uuid())
+  userId          String
+  courseId        String
+  enrolledAt      DateTime  @default(now())
+  completedAt     DateTime?
+  progressPercent Decimal   @default(0) @db.Decimal(5, 2)
+  certificateUrl  String?
+
+  user           User             @relation(fields: [userId], references: [id])
+  course         Course           @relation(fields: [courseId], references: [id])
+  lessonProgress LessonProgress[]
+
+  @@unique([userId, courseId])
+  @@index([userId, progressPercent])
+}
+
+model LessonProgress {
+  id           String    @id @default(uuid())
+  enrollmentId String
+  lessonId     String
+  isCompleted  Boolean   @default(false)
+  timeSpent    Int       @default(0) // in seconds
+  completedAt  DateTime?
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+}
+
+// Reviews and Feedback
+model CourseReview {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  rating    Int // 1-5 stars
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
 }
 
 // Enums
@@ -188,3 +429,135 @@ enum UserRole {
   MENTOR
   ADMIN
 }
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CourseCategory {
+  FRONTEND_DEVELOPMENT
+  BACKEND_DEVELOPMENT
+  FULLSTACK_DEVELOPMENT
+  DATA_SCIENCE
+  DEVOPS
+  MOBILE_DEVELOPMENT
+  SYSTEM_DESIGN
+  BEHAVIORAL_SKILLS
+  TECHNICAL_INTERVIEWS
+}
+
+enum ContentType {
+  TEXT
+  VIDEO
+  AUDIO
+  PDF
+  INTERACTIVE
+  EXTERNAL_LINK
+}
+
+// Quiz-related enums
+enum QuizType {
+  MODULE_ASSESSMENT // End-of-module knowledge check
+  PRACTICE_QUIZ // Practice questions without scoring
+  FINAL_ASSESSMENT // Course completion quiz
+  SKILL_EVALUATION // Specific skill testing
+  CERTIFICATION_EXAM // Certificate eligibility test
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE // MCQ with single correct answer
+  MULTIPLE_SELECT // MCQ with multiple correct answers
+  TRUE_FALSE // Simple true/false questions
+  SHORT_ANSWER // Text input (1-2 sentences)
+  LONG_ANSWER // Essay-style responses
+  CODE_CHALLENGE // Programming/coding questions
+  FILL_IN_BLANK // Complete the sentence/code
+  MATCHING // Match items from two lists
+  DRAG_AND_DROP // Interactive drag-drop questions
+  VIDEO_RESPONSE // Record video answer (future feature)
+}
+
+enum QuizDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum QuizStatus {
+  DRAFT // Quiz being created
+  PUBLISHED // Active and available
+  ARCHIVED // No longer active
+  SCHEDULED // Will be available at future date
+}
+
+// Assignment-related enums
+enum AssignmentType {
+  PROJECT // Complete project submission
+  CODING_EXERCISE // Programming assignment
+  PORTFOLIO_PIECE // Add to portfolio
+  RESEARCH_PAPER // Written research assignment
+  PRESENTATION // Slide presentation
+  CODE_REVIEW // Review others' code
+  CASE_STUDY // Business case analysis
+  DESIGN_CHALLENGE // UI/UX design task
+  API_INTEGRATION // Build API integration
+  DATABASE_DESIGN // Database schema design
+  TECHNICAL_WRITING // Documentation writing
+}
+
+enum AssignmentDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum AssignmentStatus {
+  DRAFT // Assignment being created
+  PUBLISHED // Active and available
+  ARCHIVED // No longer active
+  SCHEDULED // Will be available at future date
+}
+
+enum SubmissionStatus {
+  NOT_STARTED // Student hasn't begun
+  IN_PROGRESS // Student working on it
+  SUBMITTED // Completed and submitted
+  GRADED // Instructor has graded
+  RETURNED // Needs revision
+  APPROVED // Final approval given
+}
+
+enum GradingStatus {
+  PENDING // Awaiting grading
+  IN_REVIEW // Being graded
+  COMPLETED // Grading finished
+  NEEDS_REVISION // Requires student changes
+}
+
+// File and submission types
+enum FileType {
+  IMAGE // jpg, png, gif, etc.
+  VIDEO // mp4, webm, etc.
+  AUDIO // mp3, wav, etc.
+  DOCUMENT // pdf, doc, etc.
+  CODE // js, py, java, etc.
+  ARCHIVE // zip, rar, etc.
+  SPREADSHEET // xlsx, csv, etc.
+  PRESENTATION // pptx, etc.
+  OTHER // Any other file type
+}
+
+enum SubmissionType {
+  FILE_UPLOAD // File attachment
+  TEXT_SUBMISSION // Written text response
+  URL_SUBMISSION // Link to external work
+  CODE_REPOSITORY // GitHub/GitLab link
+  VIDEO_RECORDING // Recorded video response
+  AUDIO_RECORDING // Recorded audio response
+  INTERACTIVE_DEMO // Live demo or presentation
+}
+

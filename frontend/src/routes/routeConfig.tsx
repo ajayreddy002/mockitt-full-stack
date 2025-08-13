@@ -9,22 +9,17 @@ import { InterviewSessionPage } from '../pages/interview/InterviewSessionPage';
 import { InterviewSetupPage } from '../pages/interview/InterviewSetupPage';
 import { InterviewDashboard } from '../pages/interview/InterviewDashboard';
 import { InterviewResultsPage } from '../pages/interview/InterviewResultsPage';
+import { CourseDetail } from '../pages/courses/CourseDetail';
+import { CoursesCatalog } from '../pages/courses/CoursesCatalog';
+import { QuizTaking } from '../pages/quizz/QuizTaking';
+import { QuizResults } from '../pages/quizz/QuizResults';
+import { AdminDashboard } from '../pages/admin/AdminDashboard';
+import { AdminCourseList } from '../pages/admin/courses/AdminCourseList';
+import { AdminUserList } from '../pages/admin/users/UserList';
+import { AdminCourseEditor } from '../pages/admin/courses/AdminCourseEditor';
+import { AdminQuizEditor } from '../pages/quizzes/AdminQuizEditor';
 
 // Placeholder components
-
-// const InterviewsPage = () => (
-//   <div className="text-center py-12">
-//     <h2 className="text-2xl font-bold text-gray-900 mb-4">🎯 Mock Interviews</h2>
-//     <p className="text-gray-600">AI mock interview feature coming soon!</p>
-//   </div>
-// );
-
-const CoursesPage = () => (
-  <div className="text-center py-12">
-    <h2 className="text-2xl font-bold text-gray-900 mb-4">📚 Courses</h2>
-    <p className="text-gray-600">Learning platform coming soon!</p>
-  </div>
-);
 
 const CommunityPage = () => (
   <div className="text-center py-12">
@@ -59,6 +54,8 @@ export interface RouteConfig {
   component: ComponentType;
   isProtected: boolean;
   requiresDashboardLayout: boolean;
+  requiredRole?: 'ADMIN' | 'MENTOR' | 'STUDENT'; // ✅ Add role requirement
+  adminOnly?: boolean; // ✅ Add admin-only flag
   title?: string;
   description?: string;
 }
@@ -141,11 +138,35 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/courses',
-    component: CoursesPage,
+    component: CoursesCatalog,
     isProtected: true,
     requiresDashboardLayout: true,
     title: 'Courses',
-    description: 'Skill development courses and learning paths'
+    description: 'Industry-focused skill development courses and learning paths'
+  },
+  {
+    path: '/courses/:courseId',
+    component: CourseDetail,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    title: 'Course Details',
+    description: 'View course information and enroll'
+  },
+  {
+    path: '/courses/:courseId/quiz/:quizId',
+    component: QuizTaking,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    title: 'Course Details',
+    description: 'View course information and enroll'
+  },
+  {
+    path: '/courses/:courseId/quiz/:quizId/results',
+    component: QuizResults,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    title: 'Course Details',
+    description: 'View course information and enroll'
   },
   {
     path: '/community',
@@ -178,7 +199,67 @@ export const routes: RouteConfig[] = [
     requiresDashboardLayout: true,
     title: 'Settings',
     description: 'Manage your account and preferences'
-  }
+  },
+  {
+    path: '/admin',
+    component: AdminDashboard,
+    isProtected: true,
+    requiresDashboardLayout: true, // Admin has its own layout
+    adminOnly: true,
+    requiredRole: 'ADMIN',
+    title: 'Admin Dashboard',
+    description: 'Administrative dashboard and analytics'
+  },
+  {
+    path: '/admin/courses',
+    component: AdminCourseList,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    adminOnly: true,
+    requiredRole: 'ADMIN',
+    title: 'Manage Courses',
+    description: 'Course management and administration'
+  },
+  {
+    path: '/admin/courses/create',
+    component: AdminCourseEditor,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    adminOnly: true,
+    requiredRole: 'ADMIN',
+    title: 'Create Course',
+    description: 'Create new course content'
+  },
+  {
+    path: '/admin/courses/:courseId/edit',
+    component: AdminCourseEditor,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    adminOnly: true,
+    requiredRole: 'ADMIN',
+    title: 'Edit Course',
+    description: 'Edit existing course content'
+  },
+  {
+    path: '/admin/users',
+    component: AdminUserList,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    adminOnly: true,
+    requiredRole: 'ADMIN',
+    title: 'Manage Users',
+    description: 'User management and administration'
+  },
+  {
+    path: '/admin/quizzes',
+    component: AdminQuizEditor,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    adminOnly: true,
+    requiredRole: 'ADMIN',
+    title: 'Manage Quizzes',
+    description: 'Quiz creation and management'
+  },
 ];
 
 // Helper functions
@@ -196,4 +277,13 @@ export const getPublicRoutes = (): RouteConfig[] => {
 
 export const getDashboardRoutes = (): RouteConfig[] => {
   return routes.filter(route => route.requiresDashboardLayout);
+};
+export const getAdminRoutes = (): RouteConfig[] => {
+  return routes.filter(route => route.adminOnly);
+};
+
+export const getRoutesByRole = (role: string): RouteConfig[] => {
+  return routes.filter(route => 
+    !route.requiredRole || route.requiredRole === role || role === 'ADMIN'
+  );
 };

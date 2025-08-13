@@ -24,11 +24,15 @@ export const LoginForm: React.FC = () => {
       setAuthLoading(true);
       setAuthError(null);
 
-      await login(
+      const response = await login(
         data.email,
         data.password,
       );
-      navigate('/dashboard');
+      if (response?.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';

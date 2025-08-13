@@ -14,6 +14,12 @@ import { AiModule } from './ai/ai.module';
 import { InterviewsController } from './interviews/interviews.controller';
 import { InterviewsModule } from './interviews/interviews.module';
 import { InterviewsService } from './interviews/interviews.service';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { CoursesController } from './courses/courses.controller';
+import { CoursesModule } from './courses/courses.module';
+import { QuizzesModule } from './quizzes/quizzes.module';
+import { AdminController } from './admin/admin.controller';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -27,8 +33,12 @@ import { InterviewsService } from './interviews/interviews.service';
     ResumesModule,
     AiModule,
     InterviewsModule,
+    DashboardModule,
+    CoursesModule,
+    QuizzesModule,
+    AdminModule,
   ],
-  controllers: [AppController, AiController, InterviewsController],
+  controllers: [AppController, AiController, InterviewsController, CoursesController, AdminController],
   providers: [AppService, ResumesService, AiService, InterviewsService],
 })
 export class AppModule {}

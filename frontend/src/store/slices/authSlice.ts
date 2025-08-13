@@ -21,7 +21,7 @@ export interface AuthSlice {
 
   // Actions
   signup: (userData: any) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   setUser: (user: User) => void;
   setToken: (token: string) => void;
@@ -90,6 +90,7 @@ export const authSlice: StateCreator<
       // Persist to localStorage
       localStorage.setItem('authToken', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      return data.user;
     } catch (error: any) {
       set((state) => {
         state.authError = error.response?.data?.message || error.message;

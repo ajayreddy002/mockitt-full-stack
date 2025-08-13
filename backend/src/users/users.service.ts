@@ -37,6 +37,8 @@ export class UsersService {
         firstName,
         lastName,
         role: role || 'STUDENT',
+        isPremium: false, // Default to false
+        profilePicture: null, // Default to null
       },
     });
 

@@ -6,7 +6,7 @@ const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3
 // Create axios instance with base configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  // timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -34,7 +34,7 @@ api.interceptors.response.use(
       // Clear token and redirect to login
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      // window.location.href = '/login';
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -210,6 +210,253 @@ export const mockittAPI = {
       weakAreas: string[];
     }) => {
       const response = await api.post('/ai/questions/adaptive', questionData);
+      return response.data;
+    },
+  },
+  dashboard: {
+    getStats: async () => {
+      const response = await api.get('/dashboard/stats');
+      return response.data;
+    },
+
+    getRecentActivity: async () => {
+      const response = await api.get('/dashboard/recent-activity');
+      return response.data;
+    },
+
+    getUserProgress: async () => {
+      const response = await api.get('/dashboard/user-progress');
+      return response.data;
+    }
+  },
+  courses: {
+    getAll: async (filters = {} as any) => {
+      const queryParams = new URLSearchParams();
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.level) queryParams.append('level', filters.level);
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.isPremium !== undefined) {
+        queryParams.append('isPremium', filters.isPremium.toString());
+      }
+
+      const response = await api.get(`/courses?${queryParams}`);
+      return response.data;
+    },
+
+    getById: async (courseId: string) => {
+      const response = await api.get(`/courses/${courseId}`);
+      return response.data;
+    },
+
+    enroll: async (courseId: string) => {
+      const response = await api.post(`/courses/${courseId}/enroll`);
+      return response.data;
+    },
+
+    updateProgress: async (lessonId: string, progressData: { timeSpent: number }) => {
+      const response = await api.patch(`/courses/lessons/${lessonId}/progress`, progressData);
+      return response.data;
+    },
+
+    getUserEnrollments: async () => {
+      const response = await api.get('/courses/enrollments');
+      return response.data;
+    },
+
+    getCourseProgress: async (courseId: string) => {
+      const response = await api.get(`/courses/${courseId}/progress`);
+      return response.data;
+    },
+
+    submitQuiz: async (quizId: string, answers: any[]) => {
+      const response = await api.post(`/courses/quizzes/${quizId}/submit`, { answers });
+      return response.data;
+    },
+
+    getQuizResults: async (quizId: string) => {
+      const response = await api.get(`/courses/quizzes/${quizId}/results`);
+      return response.data;
+    }
+  },
+  quizzes: {
+    getById: async (quizId: string) => {
+      const response = await api.get(`/quizzes/${quizId}`);
+      return response.data;
+    },
+
+    getAttempts: async (quizId: string) => {
+      const response = await api.get(`/quizzes/${quizId}/attempts`);
+      return response.data;
+    },
+
+    startAttempt: async (quizId: string) => {
+      const response = await api.post(`/quizzes/${quizId}/attempts`);
+      return response.data;
+    },
+
+    submitAttempt: async (attemptId: string, responses: any[]) => {
+      const response = await api.post(`/quizzes/attempts/${attemptId}/submit`, { responses });
+      return response.data;
+    },
+
+    getResults: async (attemptId: string) => {
+      const response = await api.get(`/quizzes/attempts/${attemptId}/results`);
+      return response.data;
+    },
+  },
+  admin: {
+    // Dashboard methods
+    getDashboardStats: async () => {
+      const response = await api.get('/admin/dashboard');
+      return response.data;
+    },
+
+    // Course management methods
+    getCourses: async (filters = {}) => {
+      const response = await api.get('/admin/courses', { params: filters });
+      return response.data;
+    },
+
+    getCourseForEdit: async (courseId: string) => {
+      const response = await api.get(`/admin/courses/${courseId}`);
+      return response.data;
+    },
+
+    createCourse: async (courseData: any) => {
+      const response = await api.post('/admin/courses', courseData);
+      return response.data;
+    },
+
+    updateCourse: async (courseId: string, courseData: any) => {
+      const response = await api.put(`/admin/courses/${courseId}`, courseData);
+      return response.data;
+    },
+
+    deleteCourse: async (courseId: string) => {
+      const response = await api.delete(`/admin/courses/${courseId}`);
+      return response.data;
+    },
+
+    publishCourse: async (courseId: string) => {
+      const response = await api.put(`/admin/courses/${courseId}/publish`);
+      return response.data;
+    },
+
+    // User management methods
+    getUsers: async (filters = {}) => {
+      const response = await api.get('/admin/users', { params: filters });
+      return response.data;
+    },
+
+    updateUser: async (userId: string, userData: any) => {
+      const response = await api.put(`/admin/users/${userId}`, userData);
+      return response.data;
+    },
+
+    deleteUser: async (userId: string) => {
+      const response = await api.delete(`/admin/users/${userId}`);
+      return response.data;
+    },
+
+    // Quiz management methods
+    getQuizzes: async (filters = {}) => {
+      const response = await api.get('/admin/quizzes', { params: filters });
+      return response.data;
+    },
+
+    getQuizForEdit: async (quizId: string) => {
+      const response = await api.get(`/admin/quizzes/${quizId}`);
+      return response.data;
+    },
+
+    createQuiz: async (quizData: any) => {
+      const response = await api.post('/admin/quizzes', quizData);
+      return response.data;
+    },
+
+    updateQuiz: async (quizId: string, quizData: any) => {
+      const response = await api.put(`/admin/quizzes/${quizId}`, quizData);
+      return response.data;
+    },
+
+    deleteQuiz: async (quizId: string) => {
+      const response = await api.delete(`/admin/quizzes/${quizId}`);
+      return response.data;
+    },
+
+    // Analytics methods
+    getAnalytics: async (filters = {}) => {
+      const response = await api.get('/admin/analytics', { params: filters });
+      return response.data;
+    },
+
+    getUserById: async (userId: string) => {
+      const response = await api.get(`/admin/users/${userId}`);
+      return response.data;
+    },
+
+    toggleUserPremium: async (userId: string) => {
+      const response = await api.put(`/admin/users/${userId}/premium`);
+      return response.data;
+    },
+
+    // Module and lesson management
+    createModule: async (courseId: string, moduleData: any) => {
+      const response = await api.post(`/admin/courses/${courseId}/modules`, moduleData);
+      return response.data;
+    },
+
+    updateModule: async (moduleId: string, moduleData: any) => {
+      const response = await api.put(`/admin/modules/${moduleId}`, moduleData);
+      return response.data;
+    },
+
+    deleteModule: async (moduleId: string) => {
+      const response = await api.delete(`/admin/modules/${moduleId}`);
+      return response.data;
+    },
+
+    createLesson: async (moduleId: string, lessonData: any) => {
+      const response = await api.post(`/admin/modules/${moduleId}/lessons`, lessonData);
+      return response.data;
+    },
+
+    updateLesson: async (lessonId: string, lessonData: any) => {
+      const response = await api.put(`/admin/lessons/${lessonId}`, lessonData);
+      return response.data;
+    },
+
+    deleteLesson: async (lessonId: string) => {
+      const response = await api.delete(`/admin/lessons/${lessonId}`);
+      return response.data;
+    },
+
+    getQuizById: async (quizId: string) => {
+      const response = await api.get(`/admin/quizzes/${quizId}`);
+      return response.data;
+    },
+
+    // ✅ Missing Question Management Methods
+    addQuestion: async (quizId: string, questionData: any) => {
+      const response = await api.post(`/admin/quizzes/${quizId}/questions`, questionData);
+      return response.data;
+    },
+
+    updateQuestion: async (questionId: string, questionData: any) => {
+      const response = await api.put(`/admin/questions/${questionId}`, questionData);
+      return response.data;
+    },
+
+    deleteQuestion: async (questionId: string) => {
+      const response = await api.delete(`/admin/questions/${questionId}`);
+      return response.data;
+    },
+    createCourseFromAI: async (prompt: any) => {
+      const response = await api.post('/admin/courses/ai/generate', prompt);
+      return response.data;
+    },
+    createQuizFromAI: async (prompt: any) => {
+      const response = await api.post('/admin/quizzes/ai/generate', prompt);
       return response.data;
     },
   },

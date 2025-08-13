@@ -1,52 +1,48 @@
+// frontend/src/routes/AppRoutes.tsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { routes } from './routeConfig';
 import { ProtectedRoute } from './ProtectedRoute';
 import { PublicRoute } from './PublicRoute';
-import { DashboardLayout } from '../layout/DashboardLayout';
 import { useAuth } from '../store';
+import { useRole } from '../hooks/useRole';
+import { AppLayout } from '../layout/AppLayout';
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { currentRole } = useRole();
 
   return (
     <Routes>
       {routes.map((route) => {
-        const { path, component: Component, isProtected, requiresDashboardLayout } = route;
+        const { 
+          path, 
+          component: Component, 
+          isProtected, 
+          requiresDashboardLayout,
+          adminOnly,
+          requiredRole 
+        } = route;
 
         if (isProtected) {
-          // Protected routes
-          if (requiresDashboardLayout) {
-            // Protected routes with dashboard layout
-            return (
-              <Route
-                key={path}
-                path={path}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
+          return (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <ProtectedRoute requiredRole={requiredRole} adminOnly={adminOnly}>
+                  {requiresDashboardLayout ? (
+                    <AppLayout> {/* ✅ Single layout for all protected routes */}
                       <Component />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-            );
-          } else {
-            // Protected routes without dashboard layout
-            return (
-              <Route
-                key={path}
-                path={path}
-                element={
-                  <ProtectedRoute>
+                    </AppLayout>
+                  ) : (
                     <Component />
-                  </ProtectedRoute>
-                }
-              />
-            );
-          }
+                  )}
+                </ProtectedRoute>
+              }
+            />
+          );
         } else {
-          // Public routes (redirect if authenticated)
           return (
             <Route
               key={path}
@@ -61,28 +57,39 @@ export const AppRoutes: React.FC = () => {
         }
       })}
 
-      {/* Default route */}
+      {/* Default route with role-based redirect */}
       <Route 
         path="/" 
-        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} 
+        element={
+          <Navigate 
+            to={
+              isAuthenticated 
+                ? currentRole === 'ADMIN' 
+                  ? "/admin" 
+                  : "/dashboard"
+                : "/login"
+            } 
+            replace 
+          />
+        } 
       />
 
       {/* 404 route */}
       <Route 
         path="*" 
         element={
-          <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="text-center">
+          <AppLayout>
+            <div className="text-center py-12">
               <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
               <p className="text-gray-600 mb-8">Page not found</p>
-              <a 
-                href={isAuthenticated ? "/dashboard" : "/login"}
+              <button
+                onClick={() => window.history.back()}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
               >
-                Go Home
-              </a>
+                Go Back
+              </button>
             </div>
-          </div>
+          </AppLayout>
         } 
       />
     </Routes>

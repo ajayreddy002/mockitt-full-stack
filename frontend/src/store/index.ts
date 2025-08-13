@@ -8,9 +8,13 @@ import { resumeSlice, type ResumeSlice } from './slices/resumeSlice';
 import { errorSlice, type ErrorSlice } from './slices/errorSlice';
 import { interviewSlice, type InterviewSlice } from './slices/interviewSlice';
 import { useShallow } from 'zustand/shallow';
+import { dashboardSlice, type DashboardSlice } from './slices/dashboardSlice';
+import { courseSlice, type CourseSlice } from './slices/courseSlice';
+import { quizSlice, type QuizSlice } from './slices/quizzesSlice';
+import { adminSlice, type AdminSlice } from './slices/adminSlice';
 
 // Combined store interface
-export interface RootState extends AuthSlice, UISlice, ResumeSlice, ErrorSlice, InterviewSlice { }
+export interface RootState extends AuthSlice, UISlice, ResumeSlice, ErrorSlice, InterviewSlice, DashboardSlice, CourseSlice, QuizSlice, AdminSlice { }
 
 // Create the main store with all slices
 export const useStore = create<RootState>()(
@@ -23,6 +27,10 @@ export const useStore = create<RootState>()(
         ...resumeSlice(set, get, api),
         ...errorSlice(set, get, api),
         ...interviewSlice(set, get, api),
+        ...dashboardSlice(set, get, api),
+        ...courseSlice(set, get, api),
+        ...quizSlice(set, get, api),
+        ...adminSlice(set, get, api),
       }))
     ),
     {
@@ -139,6 +147,131 @@ export const useInterview = () => useStore(
     clearQuestionAnswers: state.clearQuestionAnswers,
   }))
 );
+
+export const useDashboard = () => useStore(
+  useShallow((state) => ({
+    // State - ✅ Use updated property names
+    dashboardData: state.dashboardData,
+    isLoading: state.dashboardLoading,  // ✅ Map to familiar name for component
+    error: state.dashboardError,        // ✅ Map to familiar name for component
+    lastUpdated: state.lastUpdated,
+
+    // Actions
+    fetchDashboardData: state.fetchDashboardData,
+    fetchStats: state.fetchStats,
+    fetchRecentActivity: state.fetchRecentActivity,
+    refreshDashboard: state.refreshDashboard,
+    clearDashboardError: state.clearDashboardError,
+    markActivityAsRead: state.markActivityAsRead,
+  }))
+);
+
+export const useCourses = () => useStore(
+  useShallow((state) => ({
+    courses: state.courses,
+    userEnrollments: state.userEnrollments,
+    currentCourse: state.currentCourse,
+    coursesLoading: state.coursesLoading,
+    coursesError: state.coursesError,
+    fetchCourses: state.fetchCourses,
+    fetchCourseById: state.fetchCourseById,
+    enrollInCourse: state.enrollInCourse,
+    updateProgress: state.updateProgress,
+    clearCoursesError: state.clearCoursesError,
+    updateLessonProgress: state.updateLessonProgress,
+    fetchUserEnrollments: state.fetchUserEnrollments,
+  }))
+);
+
+export const useQuiz = () => {
+  return useStore(
+    useShallow((state) => ({
+      currentQuiz: state.currentQuiz,
+      currentAttempt: state.currentAttempt,
+      previousAttempts: state.previousAttempts,
+      quizResults: state.quizResults,
+      answers: state.answers,
+      quizLoading: state.quizLoading,
+      quizError: state.quizError,
+
+      // Actions
+      fetchQuiz: state.fetchQuiz,
+      fetchPreviousAttempts: state.fetchPreviousAttempts,
+      startQuizAttempt: state.startQuizAttempt,
+      updateAnswer: state.updateAnswer,
+      submitQuiz: state.submitQuiz,
+      fetchQuizResults: state.fetchQuizResults,
+      clearQuizError: state.clearQuizError,
+      resetQuiz: state.resetQuiz,
+    })));
+};
+
+export const useAdminStore = () => {
+  return useStore(
+    useShallow((state) => ({
+      // Dashboard State
+      dashboardStats: state.dashboardStats,
+      
+      // Course Management State
+      courses: state.adminCourses, // ✅ Fixed property reference
+      currentCourse: state.adminCurrentCourse, // ✅ Fixed property reference
+      
+      // User Management State - ✅ Missing properties added
+      users: state.users,
+      currentUser: state.currentUser,
+      
+      // Quiz Management State - ✅ Missing properties added
+      quizzes: state.quizzes,
+      adminCurrentQuiz: state.adminCurrentQuiz,
+      
+      // Loading & Error States
+      loading: state.loading,
+      error: state.error,
+
+      // Dashboard Actions
+      fetchDashboardStats: state.fetchDashboardStats,
+      getAnalytics: state.getAnalytics, // ✅ Missing action added
+      
+      // Course Actions
+      fetchCoursesForAdmin: state.fetchCoursesForAdmin,
+      fetchCourseForEdit: state.fetchCourseForEdit,
+      createCourse: state.createCourse,
+      updateCourse: state.updateCourse,
+      deleteCourse: state.deleteCourse,
+      publishCourse: state.publishCourse,
+      createCourseByAI: state.createCourseByAI,
+      
+      // Module & Lesson Management Actions - ✅ Missing actions added
+      createModule: state.createModule,
+      updateModule: state.updateModule,
+      deleteModule: state.deleteModule,
+      createLesson: state.createLesson,
+      updateLesson: state.updateLesson,
+      deleteLesson: state.deleteLesson,
+      
+      // User Management Actions - ✅ Missing actions added
+      fetchUsers: state.fetchUsers,
+      fetchUserById: state.fetchUserById,
+      updateUser: state.updateUser,
+      deleteUser: state.deleteUser,
+      toggleUserPremium: state.toggleUserPremium,
+      
+      // Quiz Management Actions - ✅ Missing actions added
+      fetchQuizzes: state.fetchQuizzes,
+      fetchQuizById: state.fetchQuizById,
+      createQuiz: state.createQuiz,
+      updateQuiz: state.updateQuiz,
+      deleteQuiz: state.deleteQuiz,
+      addQuestion: state.addQuestion,
+      updateQuestion: state.updateQuestion,
+      deleteQuestion: state.deleteQuestion,
+      createQuizByAI: state.createQuizByAI,
+      
+      // Utility Actions
+      clearError: state.clearError,
+    }))
+  );
+};
 
 // Initialize store on app startup
 export const initializeStore = () => {
