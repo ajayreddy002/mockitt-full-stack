@@ -41,7 +41,7 @@ export const CourseLearning: React.FC = () => {
     coursesLoading,
     fetchCourseById,
     fetchUserEnrollments,
-    updateLessonProgress 
+    // updateLessonProgress 
   } = useCourses();
 
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
@@ -116,7 +116,7 @@ export const CourseLearning: React.FC = () => {
     if (!currentLesson || !courseId) return;
 
     try {
-      await updateLessonProgress(currentLesson.id, currentLesson.duration * 60);
+      // await updateLessonProgress(currentLesson.id, currentLesson.duration * 60);
       
       setLessonCompleted(true);
       
