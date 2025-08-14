@@ -250,8 +250,7 @@ export const CourseDetail: React.FC = () => {
                   
                   <div className="divide-y divide-gray-200">
                     {/* Lessons */}
-                    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-                    {module.lessons.map((lesson, lessonIndex) => {
+                    {module.lessons.map((lesson) => {
                       const isCompleted = isEnrolled && (course?.userProgress?.completedLessons ?? 0) >= lesson.orderIndex;
                       
                       return (
