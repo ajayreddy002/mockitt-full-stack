@@ -9,6 +9,8 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
+  isPremium: boolean;
+  profilePictureUrl?: string;
 }
 
 export interface AuthSlice {

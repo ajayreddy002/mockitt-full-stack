@@ -9,7 +9,7 @@ import { InterviewSessionPage } from '../pages/interview/InterviewSessionPage';
 import { InterviewSetupPage } from '../pages/interview/InterviewSetupPage';
 import { InterviewDashboard } from '../pages/interview/InterviewDashboard';
 import { InterviewResultsPage } from '../pages/interview/InterviewResultsPage';
-import { CourseDetail } from '../pages/courses/CourseDetail';
+import { CourseDetailPage } from '../pages/courses/CourseDetail';
 import { CoursesCatalog } from '../pages/courses/CoursesCatalog';
 import { QuizTaking } from '../pages/quizz/QuizTaking';
 import { QuizResults } from '../pages/quizz/QuizResults';
@@ -18,6 +18,7 @@ import { AdminCourseList } from '../pages/admin/courses/AdminCourseList';
 import { AdminUserList } from '../pages/admin/users/UserList';
 import { AdminCourseEditor } from '../pages/admin/courses/AdminCourseEditor';
 import { AdminQuizEditor } from '../pages/quizzes/AdminQuizEditor';
+import { LearnPage } from '../pages/learn/LearnPage';
 
 // Placeholder components
 
@@ -146,7 +147,7 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/courses/:courseId',
-    component: CourseDetail,
+    component: CourseDetailPage,
     isProtected: true,
     requiresDashboardLayout: true,
     title: 'Course Details',
@@ -167,6 +168,14 @@ export const routes: RouteConfig[] = [
     requiresDashboardLayout: true,
     title: 'Course Details',
     description: 'View course information and enroll'
+  },
+  {
+    path: '/learn',
+    component: LearnPage,
+    isProtected: true,
+    requiresDashboardLayout: true, // Since it has its own layout
+    title: 'Learn',
+    description: 'Course lesson learning page'
   },
   {
     path: '/community',

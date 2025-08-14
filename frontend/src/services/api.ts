@@ -262,6 +262,11 @@ export const mockittAPI = {
       const response = await api.get('/courses/enrollments');
       return response.data;
     },
+  
+    getMyEnrolledCourses: async () => {
+      const response = await api.get('/courses/my-courses');
+      return response.data;
+    },
 
     getCourseProgress: async (courseId: string) => {
       const response = await api.get(`/courses/${courseId}/progress`);
@@ -457,6 +462,42 @@ export const mockittAPI = {
     },
     createQuizFromAI: async (prompt: any) => {
       const response = await api.post('/admin/quizzes/ai/generate', prompt);
+      return response.data;
+    },
+  },
+  lessons: {
+    getLessonById: async (lessonId: string) => {
+      const response = await api.get(`/lessons/${lessonId}`);
+      return response.data;
+    },
+
+    getLessonNavigation: async (lessonId: string) => {
+      const response = await api.get(`/lessons/${lessonId}/navigation`);
+      return response.data;
+    },
+
+    updateProgress: async (lessonId: string, progressData: { progressPercentage: number; timeSpent?: number }) => {
+      const response = await api.put(`/lessons/${lessonId}/progress`, progressData);
+      return response.data;
+    },
+
+    markComplete: async (lessonId: string) => {
+      const response = await api.post(`/lessons/${lessonId}/complete`);
+      return response.data;
+    },
+
+    trackTimeSpent: async (lessonId: string, timeSpent: number) => {
+      const response = await api.post(`/lessons/${lessonId}/time-spent`, { timeSpent });
+      return response.data;
+    },
+
+    getUserNotes: async (lessonId: string) => {
+      const response = await api.get(`/lessons/${lessonId}/notes`);
+      return response.data;
+    },
+
+    updateUserNotes: async (lessonId: string, notes: string) => {
+      const response = await api.put(`/lessons/${lessonId}/notes`, { notes });
       return response.data;
     },
   },

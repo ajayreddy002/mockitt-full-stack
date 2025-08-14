@@ -12,9 +12,10 @@ import { dashboardSlice, type DashboardSlice } from './slices/dashboardSlice';
 import { courseSlice, type CourseSlice } from './slices/courseSlice';
 import { quizSlice, type QuizSlice } from './slices/quizzesSlice';
 import { adminSlice, type AdminSlice } from './slices/adminSlice';
+import { lessonSlice, type LessonSlice } from './slices/lessonSlice';
 
 // Combined store interface
-export interface RootState extends AuthSlice, UISlice, ResumeSlice, ErrorSlice, InterviewSlice, DashboardSlice, CourseSlice, QuizSlice, AdminSlice { }
+export interface RootState extends AuthSlice, UISlice, ResumeSlice, ErrorSlice, InterviewSlice, DashboardSlice, CourseSlice, QuizSlice, AdminSlice, LessonSlice { }
 
 // Create the main store with all slices
 export const useStore = create<RootState>()(
@@ -31,6 +32,7 @@ export const useStore = create<RootState>()(
         ...courseSlice(set, get, api),
         ...quizSlice(set, get, api),
         ...adminSlice(set, get, api),
+        ...lessonSlice(set, get, api),
       }))
     ),
     {
@@ -173,13 +175,16 @@ export const useCourses = () => useStore(
     currentCourse: state.currentCourse,
     coursesLoading: state.coursesLoading,
     coursesError: state.coursesError,
+    enrolledCoursesData: state.enrolledCoursesData,
     fetchCourses: state.fetchCourses,
     fetchCourseById: state.fetchCourseById,
     enrollInCourse: state.enrollInCourse,
     updateProgress: state.updateProgress,
     clearCoursesError: state.clearCoursesError,
-    updateLessonProgress: state.updateLessonProgress,
+    updateCourseProgress: state.updateCourseProgress,
     fetchUserEnrollments: state.fetchUserEnrollments,
+    isEnrolledInCourse: state.isEnrolledInCourse,
+    getEnrolledCourseData: state.getEnrolledCourseData,
   }))
 );
 
@@ -269,6 +274,26 @@ export const useAdminStore = () => {
       
       // Utility Actions
       clearError: state.clearError,
+    }))
+  );
+};
+
+export const useLesson = () => {
+  return useStore(
+    useShallow((state) => ({
+      currentLesson: state.currentLesson,
+      lessonNavigation: state.lessonNavigation,
+      lessonLoading: state.lessonLoading,
+      lessonError: state.lessonError,
+      
+      // Actions
+      fetchLessonById: state.fetchLessonById,
+      fetchLessonNavigation: state.fetchLessonNavigation,
+      updateLessonProgress: state.updateLessonProgress,
+      markLessonComplete: state.markLessonComplete,
+      updateLessonNotes: state.updateLessonNotes,
+      trackTimeSpent: state.trackTimeSpent,
+      clearLessonError: state.clearLessonError,
     }))
   );
 };

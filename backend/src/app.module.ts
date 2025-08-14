@@ -20,6 +20,8 @@ import { CoursesModule } from './courses/courses.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { AdminController } from './admin/admin.controller';
 import { AdminModule } from './admin/admin.module';
+import { LessonsModule } from './lessons/lessons.module';
+import { LessonsController } from './lessons/lessons.controller';
 
 @Module({
   imports: [
@@ -37,8 +39,16 @@ import { AdminModule } from './admin/admin.module';
     CoursesModule,
     QuizzesModule,
     AdminModule,
+    LessonsModule,
   ],
-  controllers: [AppController, AiController, InterviewsController, CoursesController, AdminController],
+  controllers: [
+    AppController,
+    AiController,
+    InterviewsController,
+    CoursesController,
+    AdminController,
+    LessonsController,
+  ],
   providers: [AppService, ResumesService, AiService, InterviewsService],
 })
 export class AppModule {}

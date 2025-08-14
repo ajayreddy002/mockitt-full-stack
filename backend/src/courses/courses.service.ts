@@ -2,6 +2,9 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
+  ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { CourseCategory, CourseLevel, Prisma } from '@prisma/client';
@@ -87,6 +90,22 @@ export class CoursesService {
         (sum, module) => sum + module.assignments.length,
         0,
       ),
+      stats: {
+        averageRating:
+          course.reviews.length > 0
+            ? course.reviews.reduce((sum, review) => sum + review.rating, 0) /
+              course.reviews.length
+            : 0,
+        enrollmentCount: course.enrollments.length,
+        totalDuration: course.estimatedHours,
+        totalLessons: course.modules.reduce(
+          (sum, module) => sum + module.lessons.length,
+          0,
+        ),
+      },
+      reviewCount: course.reviews.length,
+      thumbnailUrl: course.thumbnailUrl,
+      price: course.isPremium ? course.price : 0,
     }));
 
     return {
@@ -300,7 +319,7 @@ export class CoursesService {
   ) {
     // Find user's enrollment for this lesson's course
     const lesson = await this.prisma.lesson.findUnique({
-      where: { id: lessonId },
+      where: { id: lessonId as any },
       include: {
         module: {
           include: {
@@ -341,11 +360,12 @@ export class CoursesService {
         completedAt: progressData.isCompleted ? new Date() : null,
       },
       create: {
-        enrollmentId: enrollment.id,
-        lessonId,
+        enrollment: { connect: { id: enrollment.id } }, // ✅ Use connect syntax
+        lesson: { connect: { id: lessonId } },
         isCompleted: progressData.isCompleted,
         timeSpent: progressData.timeSpent || 0,
         completedAt: progressData.isCompleted ? new Date() : null,
+        user: { connect: { id: userId } },
       },
     });
 
@@ -413,5 +433,164 @@ export class CoursesService {
         completedAt: progressPercent === 100 ? new Date() : null,
       },
     });
+  }
+  async enrollUser(courseId: string, userId: string) {
+    try {
+      // Check if course exists and is published
+      const course = await this.prisma.course.findUnique({
+        where: { id: courseId },
+        select: {
+          id: true,
+          isPublished: true,
+          isPremium: true,
+          title: true,
+        },
+      });
+
+      if (!course) {
+        throw new NotFoundException('Course not found');
+      }
+
+      if (!course.isPublished) {
+        throw new ForbiddenException('Course is not available for enrollment');
+      }
+
+      // Check if user is already enrolled
+      const existingEnrollment = await this.prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId,
+          },
+        },
+      });
+
+      if (existingEnrollment) {
+        throw new ConflictException('Already enrolled in this course');
+      }
+
+      // For premium courses, check if user has premium access
+      if (course.isPremium) {
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { isPremium: true },
+        });
+
+        if (!user?.isPremium) {
+          throw new ForbiddenException(
+            'Premium subscription required for this course',
+          );
+        }
+      }
+
+      // Create enrollment
+      const enrollment = await this.prisma.enrollment.create({
+        data: {
+          userId,
+          courseId,
+          enrolledAt: new Date(),
+          progressPercent: 0,
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              level: true,
+              category: true,
+            },
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: `Successfully enrolled in ${course.title}`,
+        enrollment,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to enroll in course');
+    }
+  }
+
+  async getUserEnrollments(userId: string) {
+    console.log('Fetching user enrollments for userId:', userId);
+    return this.prisma.enrollment.findMany({
+      where: { userId },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            shortDescription: true,
+            thumbnailUrl: true,
+            level: true,
+            category: true,
+            estimatedHours: true,
+            isPremium: true,
+            isPublished: true,
+          },
+        },
+      },
+      orderBy: { enrolledAt: 'desc' },
+    });
+  }
+
+  async checkUserEnrollment(courseId: string, userId: string) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    return {
+      isEnrolled: !!enrollment,
+      enrollment,
+    };
+  }
+
+  async unenrollUser(courseId: string, userId: string) {
+    try {
+      const enrollment = await this.prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId,
+          },
+        },
+      });
+
+      if (!enrollment) {
+        throw new NotFoundException('Enrollment not found');
+      }
+
+      await this.prisma.enrollment.delete({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId,
+          },
+        },
+      });
+
+      return { success: true, message: 'Successfully unenrolled from course' };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to unenroll from course');
+    }
   }
 }

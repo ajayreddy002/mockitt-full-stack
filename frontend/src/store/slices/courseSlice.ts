@@ -19,25 +19,32 @@ interface Course {
     averageRating: number;
     enrollmentCount: number;
   };
-  modules: any
+  modules: any,
+  userProgress: number;
+  isEnrolled: boolean;
+  reviews: any;
+  price: number;
 }
 
 export interface CourseSlice {
   // State
   courses: Course[];
-  currentCourse: Course | null;
+  currentCourse: any | null;
   userEnrollments: any[];
   coursesLoading: boolean;
   coursesError: string | null;
-  
+  enrolledCoursesData: any[];
+
   // Actions
   fetchCourses: (filters?: any) => Promise<void>;
   fetchUserEnrollments: () => Promise<void>;
   fetchCourseById: (courseId: string) => Promise<void>;
   enrollInCourse: (courseId: string) => Promise<void>;
-  updateLessonProgress: (lessonId: string, timeSpent: number) => Promise<void>;
+  updateCourseProgress: (lessonId: string, timeSpent: number) => Promise<void>;
   clearCoursesError: () => void;
   updateProgress: (lessonId: string, timeSpent: number) => Promise<void>;
+  isEnrolledInCourse: (courseId: string) => boolean;
+  getEnrolledCourseData: (courseId: string) => any | null
 }
 
 export const courseSlice: StateCreator<
@@ -52,6 +59,7 @@ export const courseSlice: StateCreator<
   userEnrollments: [],
   coursesLoading: false,
   coursesError: null,
+  enrolledCoursesData: [],
 
   // ✅ Use your mockittAPI pattern instead of direct fetch calls
   fetchCourses: async (filters = {}) => {
@@ -62,7 +70,7 @@ export const courseSlice: StateCreator<
 
     try {
       const data = await mockittAPI.courses.getAll(filters); // ✅ Use your API service
-      
+
       set((state) => {
         state.courses = data.courses || data; // Handle your API response structure
         state.coursesLoading = false;
@@ -72,7 +80,7 @@ export const courseSlice: StateCreator<
         state.coursesError = 'Failed to load courses';
         state.coursesLoading = false;
       });
-      
+
       // Use your existing error handling pattern
       console.error('Course fetch error:', error);
     }
@@ -86,7 +94,7 @@ export const courseSlice: StateCreator<
 
     try {
       const courseData = await mockittAPI.courses.getById(courseId); // ✅ Use your API service
-      
+
       set((state) => {
         state.currentCourse = courseData;
         state.coursesLoading = false;
@@ -96,34 +104,47 @@ export const courseSlice: StateCreator<
         state.coursesError = 'Failed to load course details';
         state.coursesLoading = false;
       });
-      
+
       console.error('Course detail fetch error:', error);
     }
   },
 
   enrollInCourse: async (courseId: string) => {
     try {
-      const enrollment = await mockittAPI.courses.enroll(courseId); // ✅ Use your API service
-      
+      const result = await mockittAPI.courses.enroll(courseId);
+
       set((state) => {
-        state.userEnrollments.push(enrollment);
+        // ✅ Add to enrollments immediately
+        if (!state.userEnrollments.includes(courseId)) {
+          state.userEnrollments.push(courseId);
+        }
+
+        // ✅ Update current course if it's the one being enrolled in
+        if (state.currentCourse && state.currentCourse.id === courseId) {
+          state.currentCourse.isEnrolled = true;
+          state.currentCourse.userProgress = 0;
+        }
+
+        state.coursesLoading = false;
       });
+
 
       // Refresh course data to show enrollment status
       await get().fetchCourseById(courseId);
+      return result;
     } catch (error) {
       set((state) => {
         state.coursesError = 'Failed to enroll in course';
       });
-      
+
       console.error('Course enrollment error:', error);
     }
   },
 
-  updateLessonProgress: async (lessonId: string, timeSpent: number) => {
+  updateCourseProgress: async (lessonId: string, timeSpent: number) => {
     try {
       await mockittAPI.courses.updateProgress(lessonId, { timeSpent }); // ✅ Use your API service
-      
+
       // Optionally update local state or refetch data
     } catch (error) {
       console.error('Progress update failed:', error);
@@ -157,25 +178,26 @@ export const courseSlice: StateCreator<
     }
   },
   fetchUserEnrollments: async () => {
-    set((state) => {
-      state.coursesLoading = true;
-      state.coursesError = null;
-    });
-
     try {
-      const enrollments = await mockittAPI.courses.getUserEnrollments();
-      
+      const enrollmentsData = await mockittAPI.courses.getMyEnrolledCourses();
+      console.log(enrollmentsData, 'enrollmentsDataenrollmentsData')
       set((state) => {
-        state.userEnrollments = enrollments;
-        state.coursesLoading = false;
+        // ✅ Extract course IDs for quick enrollment checking
+        state.userEnrollments = enrollmentsData.map((enrollment: any) => enrollment.courseId);
+        
+        // ✅ Store full enrollment data for rich information
+        state.enrolledCoursesData = enrollmentsData;
       });
     } catch (error) {
-      set((state) => {
-        state.coursesError = 'Failed to load enrollments';
-        state.coursesLoading = false;
-      });
-      
-      console.error('Enrollments fetch error:', error);
+      console.error('Failed to fetch user enrollments:', error);
     }
+  },
+  isEnrolledInCourse: (courseId: string) => {
+    const state = get();
+    return state.userEnrollments.includes(courseId);
+  },
+  getEnrolledCourseData: (courseId: string) => {
+    const state = get();
+    return state.enrolledCoursesData.find((enrollment: any) => enrollment.courseId === courseId) || null;
   },
 });

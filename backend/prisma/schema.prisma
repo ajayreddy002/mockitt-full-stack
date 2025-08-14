@@ -4,21 +4,21 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("PROD_DB_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  firstName String
-  lastName  String
-  role      UserRole @default(STUDENT)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           UserRole @default(STUDENT)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
   profilePicture String?
-  isPremium Boolean? @default(false)
+  isPremium      Boolean? @default(false)
 
   // Relations
   resumes              Resume[]
@@ -29,6 +29,8 @@ model User {
   AssignmentSubmission AssignmentSubmission[]
   Enrollment           Enrollment[]
   CourseReview         CourseReview[]
+  lessonProgress       LessonProgress[]
+  lessonNotes          UserLessonNotes[]
 
   @@map("users")
 }
@@ -175,8 +177,47 @@ model SpeechAnalysisResult {
   @@map("speech_analysis_results")
 }
 
+model LessonProgress {
+  id                 String    @id @default(uuid())
+  userId             String // ✅ Add direct user reference
+  lessonId           String // ✅ Add direct lesson reference  
+  enrollmentId       String // Keep existing enrollment reference
+  progressPercentage Int       @default(0) // ✅ Add percentage tracking
+  timeSpent          Int       @default(0) // Already present ✅
+  isCompleted        Boolean   @default(false) // Already present ✅
+  completedAt        DateTime? // Already present ✅
+  lastAccessedAt     DateTime  @default(now()) // ✅ Add for API
+  createdAt          DateTime  @default(now()) // ✅ Add for tracking
+  updatedAt          DateTime  @updatedAt // ✅ Add for tracking
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId]) // ✅ Add for direct lesson access
+  @@unique([enrollmentId, lessonId]) // Keep existing constraint
+  @@map("lesson_progress")
+}
+
+model UserLessonNotes {
+  id        String   @id @default(uuid())
+  userId    String
+  lessonId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("user_lesson_notes")
+}
+
 model Quiz {
   id           String         @id @default(uuid())
+  lessonId     String
   moduleId     String
   title        String
   description  String?        @db.Text
@@ -196,8 +237,10 @@ model Quiz {
   module    Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   questions Question[]
   attempts  QuizAttempt[]
+  Lesson    Lesson?       @relation(fields: [lessonId], references: [id])
 
   @@index([moduleId, status])
+  @@index([lessonId, status])
 }
 
 model Question {
@@ -357,8 +400,10 @@ model Lesson {
   orderIndex  Int
   isRequired  Boolean     @default(true)
 
-  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  progress LessonProgress[]
+  module    Module            @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress  LessonProgress[]
+  userNotes UserLessonNotes[]
+  quizzes   Quiz[]
 
   @@index([moduleId, orderIndex])
 }
@@ -379,20 +424,6 @@ model Enrollment {
 
   @@unique([userId, courseId])
   @@index([userId, progressPercent])
-}
-
-model LessonProgress {
-  id           String    @id @default(uuid())
-  enrollmentId String
-  lessonId     String
-  isCompleted  Boolean   @default(false)
-  timeSpent    Int       @default(0) // in seconds
-  completedAt  DateTime?
-
-  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([enrollmentId, lessonId])
 }
 
 // Reviews and Feedback
@@ -560,4 +591,3 @@ enum SubmissionType {
   AUDIO_RECORDING // Recorded audio response
   INTERACTIVE_DEMO // Live demo or presentation
 }
-
