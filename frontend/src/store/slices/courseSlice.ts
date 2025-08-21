@@ -94,7 +94,7 @@ export const courseSlice: StateCreator<
 
     try {
       const courseData = await mockittAPI.courses.getById(courseId); // ✅ Use your API service
-
+      console.log(courseData, 'courseData');
       set((state) => {
         state.currentCourse = courseData;
         state.coursesLoading = false;

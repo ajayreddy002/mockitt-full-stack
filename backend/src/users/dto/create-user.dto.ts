@@ -55,7 +55,36 @@ export class CreateUserDto {
     example: UserRole.STUDENT,
     description: 'User role (defaults to STUDENT)',
   })
-  @IsOptional()
   @IsEnum(UserRole)
-  role?: UserRole = UserRole.STUDENT;
+  role: UserRole = UserRole.STUDENT;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Indicates if the user has a premium account',
+  })
+  @IsOptional()
+  isPremium: boolean = false;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Indicates if the user has a active account',
+  })
+  @IsOptional()
+  isActive: boolean = false;
+
+  @ApiPropertyOptional({
+    example: 'https://example.com/profile.jpg',
+    description: 'URL of the user profile picture',
+  })
+  @IsOptional()
+  @IsString()
+  profilePicture: string = 'https://example.com/default-profile.jpg';
+
+  @ApiPropertyOptional({
+    example: 'This is a sample bio for the user.',
+    description: 'Short bio or description of the user',
+  })
+  @IsOptional()
+  @IsString()
+  bio?: string = 'This is a sample bio for the user.';
 }

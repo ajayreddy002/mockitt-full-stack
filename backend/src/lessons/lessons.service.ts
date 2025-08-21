@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { UpdateProgressDto } from './dto/update-progress.dto';
+import { LessonProgressDto } from 'src/courses/dto';
 
 @Injectable()
 export class LessonsService {
@@ -116,7 +116,7 @@ export class LessonsService {
   async updateProgress(
     lessonId: any,
     userId: string,
-    progressData: UpdateProgressDto,
+    progressData: LessonProgressDto,
   ) {
     // Get enrollment ID first
     const lesson = await this.prisma.lesson.findUnique({

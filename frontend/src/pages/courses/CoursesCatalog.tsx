@@ -27,7 +27,7 @@ export const CoursesCatalog: React.FC = () => {
     category: '',
     level: '',
     search: '',
-    isPremium: false
+    isPremium: undefined
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -353,7 +353,8 @@ export const CoursesCatalog: React.FC = () => {
               <h3 className="text-2xl font-bold text-gray-900 mb-4">No courses found</h3>
               <p className="text-gray-600 mb-8">Try adjusting your filters to discover more courses.</p>
               <button
-                onClick={() => setFilters({ category: '', level: '', search: '', isPremium: false })}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                onClick={() => setFilters({ category: '', level: '', search: '', isPremium: false as any })}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold"
               >
                 Clear Filters

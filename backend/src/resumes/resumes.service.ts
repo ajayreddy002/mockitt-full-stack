@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../common/services/storage.service';
 import { AIProviderService } from './ai-provider.service';
 import { ConfigService } from '@nestjs/config';
@@ -26,7 +26,7 @@ export class ResumesService {
   ) {}
 
   async uploadResume(uploadResumeDto: UploadResumeDto) {
-    const { userId, file, autoAnalyze = false } = uploadResumeDto;
+    const { userId, file, autoAnalyze = true } = uploadResumeDto;
 
     // Validate file type
     await this.validateFile(file);

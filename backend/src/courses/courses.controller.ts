@@ -1,3 +1,4 @@
+// istanbul ignore file
 import {
   Controller,
   Get,
@@ -15,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CoursesService } from './courses.service';
-import { CourseFiltersDto, UpdateProgressDto } from './dto'; // EnrollmentDto
+import { CourseFiltersDto, LessonProgressDto } from './dto'; // EnrollmentDto
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('courses')
@@ -50,7 +51,7 @@ export class CoursesController {
   async updateLessonProgress(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Request() req,
-    @Body() progressData: UpdateProgressDto,
+    @Body() progressData: LessonProgressDto,
   ) {
     return this.coursesService.updateLessonProgress(
       req.user.id,

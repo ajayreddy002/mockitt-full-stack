@@ -19,6 +19,7 @@ import { AdminUserList } from '../pages/admin/users/UserList';
 import { AdminCourseEditor } from '../pages/admin/courses/AdminCourseEditor';
 import { AdminQuizEditor } from '../pages/quizzes/AdminQuizEditor';
 import { LearnPage } from '../pages/learn/LearnPage';
+import { QuizTakingPage } from '../pages/courses/QuizTakingPage';
 
 // Placeholder components
 
@@ -163,6 +164,22 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/courses/:courseId/quiz/:quizId/results',
+    component: QuizResults,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    title: 'Course Details',
+    description: 'View course information and enroll'
+  },
+  {
+    path: '/quiz/:quizId',
+    component: QuizTakingPage,
+    isProtected: true,
+    requiresDashboardLayout: true,
+    title: 'Course Details',
+    description: 'View course information and enroll'
+  },
+  {
+    path: '/quiz/:quizId/results/:attemptId',
     component: QuizResults,
     isProtected: true,
     requiresDashboardLayout: true,

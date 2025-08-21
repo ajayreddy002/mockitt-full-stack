@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("PROD_DB_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -217,7 +217,7 @@ model UserLessonNotes {
 
 model Quiz {
   id           String         @id @default(uuid())
-  lessonId     String
+  lessonId     String?
   moduleId     String
   title        String
   description  String?        @db.Text

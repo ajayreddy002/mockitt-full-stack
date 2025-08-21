@@ -6,7 +6,7 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CourseCategory, CourseLevel, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -414,12 +414,12 @@ export class CoursesService {
 
     if (!enrollment) return;
 
-    const totalLessons = enrollment.course.modules.reduce(
+    const totalLessons = enrollment.course?.modules.reduce(
       (sum, module) => sum + module.lessons.length,
       0,
     );
 
-    const completedLessons = enrollment.lessonProgress.filter(
+    const completedLessons = enrollment.lessonProgress?.filter(
       (progress) => progress.isCompleted,
     ).length;
 
@@ -475,8 +475,8 @@ export class CoursesService {
           where: { id: userId },
           select: { isPremium: true },
         });
-
-        if (!user?.isPremium) {
+        const PAYMENTS_ENABLED = false;
+        if (course.isPremium && !user.isPremium && !PAYMENTS_ENABLED) {
           throw new ForbiddenException(
             'Premium subscription required for this course',
           );

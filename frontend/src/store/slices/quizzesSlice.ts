@@ -77,6 +77,7 @@ export interface QuizSlice {
   fetchQuizResults: (attemptId: string) => Promise<void>;
   clearQuizError: () => void;
   resetQuiz: () => void;
+  fetchUserAttempts: (quizId: string) => Promise<void>;
 }
 
 export const quizSlice: StateCreator<
@@ -233,5 +234,21 @@ export const quizSlice: StateCreator<
       state.answers = {};
       state.quizError = null;
     });
+  },
+  fetchUserAttempts: async (quizId: string) => {
+    try {
+      const attempts = await mockittAPI.quizzes.getUserAttempts(quizId);
+      
+      set((state) => {
+        state.previousAttempts = attempts;
+      });
+      return attempts;
+    } catch (error: any) {
+      set((state) => {
+        state.quizError = error.response?.data?.message || 'Failed to load user attempts';
+      });
+      
+      throw error;
+    }
   },
 });

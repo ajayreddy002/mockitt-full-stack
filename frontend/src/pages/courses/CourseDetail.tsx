@@ -19,9 +19,10 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react';
-import { useCourses, useAuth, useUI } from '../../store';
+import { useCourses, useAuth, useUI, useQuiz } from '../../store';
 // import { CourseHeader } from '../../components/courses/CourseHeader';
 import { getCourseDefaultThumbnail } from '../../utils/courseUtils';
+import { QuizCard } from '../../components/courses/QuizCard';
 
 export const CourseDetailPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -38,9 +39,11 @@ export const CourseDetailPage: React.FC = () => {
     getEnrolledCourseData,
     coursesLoading
   } = useCourses();
+  const { fetchUserAttempts } = useQuiz();
 
   const [localEnrollmentStatus, setLocalEnrollmentStatus] = useState<boolean | null>(null);
   const [enrollmentData, setEnrollmentData] = useState<any>(null);
+  const [userAttempts, setUserAttempts] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     if (courseId) {
@@ -63,6 +66,37 @@ export const CourseDetailPage: React.FC = () => {
       }
     }
   }, [currentCourse, user, isEnrolledInCourse, getEnrolledCourseData]);
+
+  useEffect(() => {
+    const fetchUserQuizAttempts = async () => {
+      if (currentCourse && localEnrollmentStatus) {
+        console.log(`Fetching quiz attempts for course ${currentCourse.modules}...`);
+        const attemptPromises = currentCourse.modules?.flatMap((module: any) =>
+          module.quizzes?.map(async (quiz: any) => {
+            try {
+              console.log(`Fetching attempts for quiz ${quiz.id}...`);
+              const attempts = await fetchUserAttempts(quiz.id);
+              return { quizId: quiz.id, attempts };
+            } catch (error) {
+              console.error(`Failed to fetch attempts for quiz ${quiz.id}:`, error);
+              return { quizId: quiz.id, attempts: [] };
+            }
+          }) || []
+        ) || [];
+
+        const results = await Promise.all(attemptPromises);
+        const attemptsMap = results.reduce((acc, { quizId, attempts }) => {
+          acc[quizId] = attempts;
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        setUserAttempts(attemptsMap);
+      }
+    };
+
+    fetchUserQuizAttempts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCourse, localEnrollmentStatus]);
 
   const handleStartCourse = () => {
     if (!currentCourse) return;
@@ -170,9 +204,6 @@ export const CourseDetailPage: React.FC = () => {
   const isEnrolled = localEnrollmentStatus;
   // ✅ Use enrollment data for enhanced course information
   const courseToDisplay = enrollmentData?.course || currentCourse;
-  console.log(courseToDisplay.modules)
-  console.log(currentCourse, 'currentCourse')
-  console.log(enrollmentData, 'enrollmentData')
   const userProgress = enrollmentData?.progressPercent || 0;
 
   return (
@@ -204,10 +235,10 @@ export const CourseDetailPage: React.FC = () => {
               {/* Enhanced Badges */}
               <div className="flex items-center space-x-4 mb-8">
                 <span className={`px-6 py-3 rounded-2xl text-sm font-bold shadow-lg ${currentCourse.level === 'BEGINNER'
-                    ? 'bg-gradient-to-r from-green-400 to-green-500 text-white'
-                    : currentCourse.level === 'INTERMEDIATE'
-                      ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white'
-                      : 'bg-gradient-to-r from-red-400 to-red-500 text-white'
+                  ? 'bg-gradient-to-r from-green-400 to-green-500 text-white'
+                  : currentCourse.level === 'INTERMEDIATE'
+                    ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white'
+                    : 'bg-gradient-to-r from-red-400 to-red-500 text-white'
                   }`}>
                   {currentCourse.level}
                 </span>
@@ -374,7 +405,11 @@ export const CourseDetailPage: React.FC = () => {
                       className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white py-4 px-8 rounded-2xl hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all duration-300 flex items-center justify-center space-x-3 font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-105 mb-8"
                     >
                       <UserCheck className="h-6 w-6" />
-                      <span>{coursesLoading ? 'Enrolling...' : 'Enroll Now - Free'}</span>
+                      {courseToDisplay.isPremium && !user?.isPremium ? (
+                        <span>Purchase - ${courseToDisplay.price || 29}</span>
+                      ) : (
+                        <span>{coursesLoading ? 'Enrolling...' : 'Enroll Now - Free'}</span>
+                      )}
                     </button>
                   )}
 
@@ -456,6 +491,14 @@ export const CourseDetailPage: React.FC = () => {
                       <div className="text-sm text-gray-500">Complete</div>
                     </div>
                   </div>
+                  {module.quizzes?.map((quiz: any) => (
+                    <QuizCard
+                      key={quiz.id}
+                      quiz={quiz}
+                      userAttempts={userAttempts[quiz.id] || []}
+                      isEnrolled={isEnrolled as boolean}
+                    />
+                  ))}
                 </div>
 
                 {/* Enhanced Module Lessons */}
@@ -471,18 +514,18 @@ export const CourseDetailPage: React.FC = () => {
                       <div
                         key={lesson.id}
                         className={`p-6 transition-all duration-300 ${isLessonLocked
-                            ? 'opacity-60'
-                            : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 cursor-pointer group'
+                          ? 'opacity-60'
+                          : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 cursor-pointer group'
                           }`}
                         onClick={() => !isLessonLocked && handleLessonClick(lesson.id)}
                       >
                         <div className="flex items-center space-x-6">
                           {/* Enhanced Lesson Icon */}
                           <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${isLessonLocked
-                              ? 'bg-gray-200'
-                              : isCompleted
-                                ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white'
-                                : 'bg-gradient-to-br from-blue-500 to-purple-500 text-white group-hover:scale-110 transition-transform duration-300'
+                            ? 'bg-gray-200'
+                            : isCompleted
+                              ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white'
+                              : 'bg-gradient-to-br from-blue-500 to-purple-500 text-white group-hover:scale-110 transition-transform duration-300'
                             }`}>
                             {isLessonLocked ? (
                               <Lock className="h-6 w-6 text-gray-400" />

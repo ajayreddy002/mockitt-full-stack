@@ -11,13 +11,13 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { LessonsService } from './lessons.service';
-import { UpdateProgressDto } from './dto/update-progress.dto';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { LessonProgressDto } from 'src/courses/dto';
 
 @ApiTags('lessons')
 @Controller('lessons')
@@ -47,7 +47,7 @@ export class LessonsController {
   @ApiOperation({ summary: 'Update lesson progress' })
   async updateProgress(
     @Param('id') id: string,
-    @Body() progressData: UpdateProgressDto,
+    @Body() progressData: LessonProgressDto,
     @Request() req,
   ) {
     return this.lessonsService.updateProgress(id, req.user.id, progressData);

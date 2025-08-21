@@ -295,7 +295,7 @@ export const mockittAPI = {
     },
 
     startAttempt: async (quizId: string) => {
-      const response = await api.post(`/quizzes/${quizId}/attempts`);
+      const response = await api.post(`/courses/quizzes/${quizId}/start`);
       return response.data;
     },
 
@@ -306,6 +306,37 @@ export const mockittAPI = {
 
     getResults: async (attemptId: string) => {
       const response = await api.get(`/quizzes/attempts/${attemptId}/results`);
+      return response.data;
+    },
+    getModuleQuizzes: async (moduleId: string) => {
+      const response = await api.get(`/courses/quizzes/${moduleId}`);
+      return response.data;
+    },
+
+    // Submit answer for a specific question
+    answerQuestion: async (attemptId: string, questionId: string, answer: any) => {
+      const response = await api.patch(
+        `/courses/quizzes/attempts/${attemptId}/questions/${questionId}`,
+        { answer }
+      );
+      return response.data;
+    },
+
+    // Submit/finish the entire quiz attempt
+    finishAttempt: async (attemptId: string) => {
+      const response = await api.post(`/courses/quizzes/attempts/${attemptId}/submit`);
+      return response.data;
+    },
+
+    // Get quiz attempt results
+    getAttemptResults: async (attemptId: string) => {
+      const response = await api.get(`/courses/quizzes/attempts/${attemptId}/results`);
+      return response.data;
+    },
+
+    // Get user's attempt history for a quiz
+    getUserAttempts: async (quizId: string) => {
+      const response = await api.get(`/quizzes/${quizId}/attempts`);
       return response.data;
     },
   },

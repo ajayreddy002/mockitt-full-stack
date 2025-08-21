@@ -208,6 +208,7 @@ export const useQuiz = () => {
       fetchQuizResults: state.fetchQuizResults,
       clearQuizError: state.clearQuizError,
       resetQuiz: state.resetQuiz,
+      fetchUserAttempts: state.fetchUserAttempts,
     })));
 };
 

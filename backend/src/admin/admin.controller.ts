@@ -138,11 +138,13 @@ export class AdminController {
   }
 
   @Get('quizzes/:id')
+  @ApiBody({ type: ParseUUIDPipe })
   async getQuizById(@Param('id', ParseUUIDPipe) quizId: string) {
     return this.adminService.getQuizById(quizId);
   }
 
   @Post('quizzes')
+  @ApiBody({ type: CreateQuizDto })
   async createQuiz(@Body() createQuizDto: CreateQuizDto) {
     return this.adminService.createQuiz(createQuizDto);
   }
