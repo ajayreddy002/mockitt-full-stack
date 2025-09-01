@@ -9,7 +9,7 @@ import { InterviewSessionPage } from '../pages/interview/InterviewSessionPage';
 import { InterviewSetupPage } from '../pages/interview/InterviewSetupPage';
 import { InterviewDashboard } from '../pages/interview/InterviewDashboard';
 import { InterviewResultsPage } from '../pages/interview/InterviewResultsPage';
-import { CourseDetailPage } from '../pages/courses/CourseDetail';
+import { CourseDetail } from '../pages/courses/CourseDetail';
 import { CoursesCatalog } from '../pages/courses/CoursesCatalog';
 import { QuizTaking } from '../pages/quizz/QuizTaking';
 import { QuizResults } from '../pages/quizz/QuizResults';
@@ -148,7 +148,7 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/courses/:courseId',
-    component: CourseDetailPage,
+    component: CourseDetail,
     isProtected: true,
     requiresDashboardLayout: true,
     title: 'Course Details',

@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("PROD_DB_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -241,6 +241,7 @@ model Quiz {
 
   @@index([moduleId, status])
   @@index([lessonId, status])
+  @@map("quizzes")
 }
 
 model Question {
@@ -260,6 +261,7 @@ model Question {
   responses QuizResponse[]
 
   @@index([quizId, orderIndex])
+  @@map("questions")
 }
 
 model Assignment {
@@ -286,6 +288,7 @@ model Assignment {
   submissions AssignmentSubmission[]
 
   @@index([moduleId, status, dueDate])
+  @@map("assignments")
 }
 
 model QuizAttempt {
@@ -305,6 +308,7 @@ model QuizAttempt {
   responses QuizResponse[]
 
   @@index([userId, quizId])
+  @@map("quiz_attempts")
 }
 
 model QuizResponse {
@@ -320,6 +324,7 @@ model QuizResponse {
   question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([attemptId, questionId])
+  @@map("quiz_responses")
 }
 
 model AssignmentSubmission {
@@ -344,6 +349,8 @@ model AssignmentSubmission {
 
   @@unique([userId, assignmentId])
   @@index([userId, status])
+
+  @@map("assignment_submissions")
 }
 
 // Course Management Models
@@ -369,6 +376,8 @@ model Course {
   reviews     CourseReview[]
 
   @@index([category, level, isPublished])
+
+  @@map("courses")
 }
 
 model Module {
@@ -387,6 +396,8 @@ model Module {
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@index([courseId, orderIndex])
+
+  @@map("modules")
 }
 
 model Lesson {
@@ -406,6 +417,8 @@ model Lesson {
   quizzes   Quiz[]
 
   @@index([moduleId, orderIndex])
+
+  @@map("lessons")
 }
 
 // Enrollment and Progress Tracking
@@ -424,6 +437,8 @@ model Enrollment {
 
   @@unique([userId, courseId])
   @@index([userId, progressPercent])
+
+  @@map("enrollments")
 }
 
 // Reviews and Feedback
@@ -439,6 +454,8 @@ model CourseReview {
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
+
+  @@map("course_reviews")
 }
 
 // Enums

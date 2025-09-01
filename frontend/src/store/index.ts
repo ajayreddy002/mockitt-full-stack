@@ -209,6 +209,7 @@ export const useQuiz = () => {
       clearQuizError: state.clearQuizError,
       resetQuiz: state.resetQuiz,
       fetchUserAttempts: state.fetchUserAttempts,
+      submitQuestionAnswer: state.submitQuestionAnswer
     })));
 };
 

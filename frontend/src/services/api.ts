@@ -34,7 +34,7 @@ api.interceptors.response.use(
       // Clear token and redirect to login
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      if(window.location.pathname !== '/login') window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -272,71 +272,63 @@ export const mockittAPI = {
       const response = await api.get(`/courses/${courseId}/progress`);
       return response.data;
     },
-
-    submitQuiz: async (quizId: string, answers: any[]) => {
-      const response = await api.post(`/courses/quizzes/${quizId}/submit`, { answers });
+  },
+  quizzes: {
+    // ✅ Get quizzes for a specific module
+    getModuleQuizzes: async (moduleId: string) => {
+      const response = await api.get(`/quizzes/modules/${moduleId}`);
       return response.data;
     },
 
-    getQuizResults: async (quizId: string) => {
-      const response = await api.get(`/courses/quizzes/${quizId}/results`);
-      return response.data;
-    }
-  },
-  quizzes: {
+    // ✅ Get quiz by ID with user context
     getById: async (quizId: string) => {
       const response = await api.get(`/quizzes/${quizId}`);
       return response.data;
     },
 
-    getAttempts: async (quizId: string) => {
+    // ✅ Get user attempts for a quiz
+    getUserAttempts: async (quizId: string) => {
       const response = await api.get(`/quizzes/${quizId}/attempts`);
       return response.data;
     },
 
+    // ✅ Start new quiz attempt
     startAttempt: async (quizId: string) => {
-      const response = await api.post(`/courses/quizzes/${quizId}/start`);
+      const response = await api.post(`/quizzes/${quizId}/attempts`);
       return response.data;
     },
 
+    // ✅ Submit individual question answer
+    answerQuestion: async (attemptId: string, questionId: string, answer: any, timeSpent?: number) => {
+      const response = await api.patch(
+        `/quizzes/attempts/${attemptId}/questions/${questionId}`,
+        { answer, timeSpent }
+      );
+      return response.data;
+    },
+
+    // ✅ Submit bulk quiz responses
     submitAttempt: async (attemptId: string, responses: any[]) => {
       const response = await api.post(`/quizzes/attempts/${attemptId}/submit`, { responses });
       return response.data;
     },
 
+    // ✅ Finish quiz attempt
+    finishAttempt: async (attemptId: string) => {
+      const response = await api.post(`/quizzes/attempts/${attemptId}/finish`);
+      return response.data;
+    },
+
+    // ✅ Get quiz attempt results
     getResults: async (attemptId: string) => {
       const response = await api.get(`/quizzes/attempts/${attemptId}/results`);
       return response.data;
     },
-    getModuleQuizzes: async (moduleId: string) => {
-      const response = await api.get(`/courses/quizzes/${moduleId}`);
-      return response.data;
-    },
 
-    // Submit answer for a specific question
-    answerQuestion: async (attemptId: string, questionId: string, answer: any) => {
-      const response = await api.patch(
-        `/courses/quizzes/attempts/${attemptId}/questions/${questionId}`,
-        { answer }
-      );
-      return response.data;
-    },
-
-    // Submit/finish the entire quiz attempt
-    finishAttempt: async (attemptId: string) => {
-      const response = await api.post(`/courses/quizzes/attempts/${attemptId}/submit`);
-      return response.data;
-    },
-
-    // Get quiz attempt results
-    getAttemptResults: async (attemptId: string) => {
-      const response = await api.get(`/courses/quizzes/attempts/${attemptId}/results`);
-      return response.data;
-    },
-
-    // Get user's attempt history for a quiz
-    getUserAttempts: async (quizId: string) => {
-      const response = await api.get(`/quizzes/${quizId}/attempts`);
+    // ✅ Get user quiz history
+    getQuizHistory: async (quizId?: string) => {
+      const url = quizId ? `/quizzes/history?quizId=${quizId}` : '/quizzes/history';
+      const response = await api.get(url);
       return response.data;
     },
   },

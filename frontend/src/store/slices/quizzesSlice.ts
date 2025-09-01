@@ -16,6 +16,11 @@ interface Quiz {
   showResults: boolean;
   allowReview: boolean;
   questions: Question[];
+  isEnrolled: boolean;
+  userAttempts: number;
+  attemptsRemaining: number;
+  canAttempt: boolean;
+  maxScore: number;
 }
 
 interface Question {
@@ -25,7 +30,6 @@ interface Question {
   options?: string[];
   points: number;
   orderIndex: number;
-  difficulty: string;
 }
 
 interface QuizAttempt {
@@ -41,27 +45,34 @@ interface QuizAttempt {
 
 interface QuizResults {
   attempt: QuizAttempt;
-  responses: {
-    questionId: string;
-    question: string;
-    userAnswer: any;
-    correctAnswer: any;
-    isCorrect: boolean;
-    pointsEarned: number;
-    explanation?: string;
-  }[];
   quiz: {
     id: string;
     title: string;
     passingScore: number;
     allowReview: boolean;
+    showResults: boolean;
+  };
+  results?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    incorrectAnswers: number;
+    unansweredQuestions: number;
+    detailedResponses?: {
+      questionId: string;
+      questionText: string;
+      userAnswer: any;
+      correctAnswer: any;
+      isCorrect: boolean;
+      pointsEarned: number;
+      explanation?: string;
+    }[];
   };
 }
 
 export interface QuizSlice {
   // State
   currentQuiz: Quiz | null;
-  currentAttempt: QuizAttempt | null;
+  currentAttempt: any | null;
   previousAttempts: QuizAttempt[];
   quizResults: QuizResults | null;
   answers: Record<string, any>;
@@ -71,13 +82,14 @@ export interface QuizSlice {
   // Actions
   fetchQuiz: (quizId: string) => Promise<void>;
   fetchPreviousAttempts: (quizId: string) => Promise<void>;
-  startQuizAttempt: (quizId: string) => Promise<void>;
+  startQuizAttempt: (quizId: string) => Promise<any>;
   updateAnswer: (questionId: string, answer: any) => void;
-  submitQuiz: (attemptId: string) => Promise<void>;
+  submitQuestionAnswer: (attemptId: string, questionId: string, answer: any, timeSpent?: number) => Promise<void>;
+  submitQuiz: (attemptId: string) => Promise<any>;
   fetchQuizResults: (attemptId: string) => Promise<void>;
   clearQuizError: () => void;
   resetQuiz: () => void;
-  fetchUserAttempts: (quizId: string) => Promise<void>;
+  fetchUserAttempts: (quizId: string) => Promise<QuizAttempt[]>;
 }
 
 export const quizSlice: StateCreator<
@@ -95,7 +107,7 @@ export const quizSlice: StateCreator<
   quizLoading: false,
   quizError: null,
 
-  // Actions
+  // ✅ Enhanced fetch quiz with enrollment context
   fetchQuiz: async (quizId: string) => {
     set((state) => {
       state.quizLoading = true;
@@ -104,7 +116,6 @@ export const quizSlice: StateCreator<
 
     try {
       const quiz = await mockittAPI.quizzes.getById(quizId);
-      
       set((state) => {
         state.currentQuiz = quiz;
         state.quizLoading = false;
@@ -114,15 +125,13 @@ export const quizSlice: StateCreator<
         state.quizError = error.response?.data?.message || 'Failed to load quiz';
         state.quizLoading = false;
       });
-      
-      console.error('Quiz fetch error:', error);
     }
   },
 
+  // ✅ Enhanced previous attempts
   fetchPreviousAttempts: async (quizId: string) => {
     try {
-      const attempts = await mockittAPI.quizzes.getAttempts(quizId);
-      
+      const attempts = await mockittAPI.quizzes.getUserAttempts(quizId);
       set((state) => {
         state.previousAttempts = attempts;
       });
@@ -130,11 +139,10 @@ export const quizSlice: StateCreator<
       set((state) => {
         state.quizError = error.response?.data?.message || 'Failed to load attempts';
       });
-      
-      console.error('Attempts fetch error:', error);
     }
   },
 
+  // ✅ Enhanced start quiz with attempt data
   startQuizAttempt: async (quizId: string) => {
     set((state) => {
       state.quizLoading = true;
@@ -142,30 +150,47 @@ export const quizSlice: StateCreator<
     });
 
     try {
-      const attempt = await mockittAPI.quizzes.startAttempt(quizId);
-      
+      const attemptData = await mockittAPI.quizzes.startAttempt(quizId);
       set((state) => {
-        state.currentAttempt = attempt;
+        state.currentAttempt = attemptData.attempt;
+        state.currentQuiz = attemptData.quiz;
         state.answers = {}; // Reset answers for new attempt
         state.quizLoading = false;
       });
+      return attemptData;
     } catch (error: any) {
       set((state) => {
         state.quizError = error.response?.data?.message || 'Failed to start quiz';
         state.quizLoading = false;
       });
-      
-      console.error('Start attempt error:', error);
-      throw error; // Re-throw to handle in component
+      throw error;
     }
   },
 
+  // ✅ Local answer storage
   updateAnswer: (questionId: string, answer: any) => {
     set((state) => {
       state.answers[questionId] = answer;
     });
   },
 
+  // ✅ NEW: Submit individual question answer
+  submitQuestionAnswer: async (attemptId: string, questionId: string, answer: any, timeSpent?: number) => {
+    try {
+      await mockittAPI.quizzes.answerQuestion(attemptId, questionId, answer, timeSpent);
+      // Update local answer state as well
+      set((state) => {
+        state.answers[questionId] = answer;
+      });
+    } catch (error: any) {
+      set((state) => {
+        state.quizError = error.response?.data?.message || 'Failed to submit answer';
+      });
+      throw error;
+    }
+  },
+
+  // ✅ Enhanced submit quiz (bulk or finish)
   submitQuiz: async (attemptId: string) => {
     set((state) => {
       state.quizLoading = true;
@@ -173,29 +198,36 @@ export const quizSlice: StateCreator<
     });
 
     try {
-      const responses = Object.entries(get().answers).map(([questionId, answer]) => ({
-        questionId,
-        answer,
-      }));
+      const answers = get().answers;
+      let result;
 
-      const result = await mockittAPI.quizzes.submitAttempt(attemptId, responses);
-      
+      // Check if we have answers to submit in bulk
+      if (Object.keys(answers).length > 0) {
+        const responses = Object.entries(answers).map(([questionId, answer]) => ({
+          questionId,
+          answer,
+        }));
+        result = await mockittAPI.quizzes.submitAttempt(attemptId, responses);
+      } else {
+        // Just finish the attempt (answers already submitted individually)
+        result = await mockittAPI.quizzes.finishAttempt(attemptId);
+      }
+
       set((state) => {
         state.quizLoading = false;
+        state.quizResults = result;
       });
-
       return result;
     } catch (error: any) {
       set((state) => {
         state.quizError = error.response?.data?.message || 'Failed to submit quiz';
         state.quizLoading = false;
       });
-      
-      console.error('Submit quiz error:', error);
-      throw error; // Re-throw to handle in component
+      throw error;
     }
   },
 
+  // ✅ Enhanced fetch results
   fetchQuizResults: async (attemptId: string) => {
     set((state) => {
       state.quizLoading = true;
@@ -204,7 +236,6 @@ export const quizSlice: StateCreator<
 
     try {
       const results = await mockittAPI.quizzes.getResults(attemptId);
-      
       set((state) => {
         state.quizResults = results;
         state.quizLoading = false;
@@ -214,17 +245,17 @@ export const quizSlice: StateCreator<
         state.quizError = error.response?.data?.message || 'Failed to load results';
         state.quizLoading = false;
       });
-      
-      console.error('Results fetch error:', error);
     }
   },
 
+  // ✅ Clear errors
   clearQuizError: () => {
     set((state) => {
       state.quizError = null;
     });
   },
 
+  // ✅ Reset quiz state
   resetQuiz: () => {
     set((state) => {
       state.currentQuiz = null;
@@ -235,10 +266,11 @@ export const quizSlice: StateCreator<
       state.quizError = null;
     });
   },
+
+  // ✅ Enhanced user attempts
   fetchUserAttempts: async (quizId: string) => {
     try {
       const attempts = await mockittAPI.quizzes.getUserAttempts(quizId);
-      
       set((state) => {
         state.previousAttempts = attempts;
       });
@@ -247,7 +279,6 @@ export const quizSlice: StateCreator<
       set((state) => {
         state.quizError = error.response?.data?.message || 'Failed to load user attempts';
       });
-      
       throw error;
     }
   },

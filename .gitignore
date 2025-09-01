@@ -16,7 +16,7 @@ frontend/node_modules
 backend/dist
 frontend/dist
 frontend/dist-ssr
-.env
+backend/.env
 
 # Editor directories and files
 .vscode/*
@@ -32,3 +32,5 @@ frontend/dist-ssr
 backend/.yarn
 backend/.yarn/*
 frontend/.yarn
+backend/.env
+frontend/.env

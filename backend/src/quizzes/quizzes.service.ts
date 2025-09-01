@@ -1,4 +1,3 @@
-// src/quizzes/quizzes.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -12,7 +11,6 @@ import { Question, QuizStatus, QuestionType } from '@prisma/client';
 export class QuizzesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ✅ Get all published quizzes for a module with user's attempt history
   async getModuleQuizzes(moduleId: string, userId: string) {
     return this.prisma.quiz.findMany({
       where: {
@@ -23,7 +21,7 @@ export class QuizzesService {
         attempts: {
           where: { userId },
           orderBy: { startedAt: 'desc' },
-          take: 3, // Last 3 attempts
+          take: 3,
           select: {
             id: true,
             score: true,
@@ -46,7 +44,7 @@ export class QuizzesService {
     });
   }
 
-  // ✅ Get quiz by ID with user context
+  // ✅ Get quiz by ID with enrollment validation
   async getQuizById(quizId: string, userId: string) {
     const quiz = await this.prisma.quiz.findFirst({
       where: {
@@ -73,7 +71,7 @@ export class QuizzesService {
             type: true,
             options: true,
             points: true,
-            // Don't expose correct answers
+            orderIndex: true,
           },
           orderBy: { orderIndex: 'asc' },
         },
@@ -102,7 +100,6 @@ export class QuizzesService {
       throw new NotFoundException('Quiz not found or not available');
     }
 
-    // Check if user is enrolled in the course
     const isEnrolled = quiz.module.course.enrollments.length > 0;
     const userAttempts = await this.prisma.quizAttempt.count({
       where: { userId, quizId },
@@ -136,9 +133,9 @@ export class QuizzesService {
     });
   }
 
-  // ✅ Start a new quiz attempt with comprehensive validation
+  // ✅ Start a new quiz attempt with validation
   async startAttempt(userId: string, quizId: string) {
-    // Validate quiz exists and is published
+    // Validate quiz and enrollment
     const quiz = await this.prisma.quiz.findFirst({
       where: {
         id: quizId,
@@ -164,7 +161,6 @@ export class QuizzesService {
       throw new NotFoundException('Quiz not found or not available');
     }
 
-    // Check if user is enrolled in the course
     if (quiz.module.course.enrollments.length === 0) {
       throw new ForbiddenException(
         'You must be enrolled in this course to take the quiz',
@@ -182,7 +178,7 @@ export class QuizzesService {
       );
     }
 
-    // Get questions (randomized if needed)
+    // Get questions
     const questions = quiz.isRandomized
       ? await this.prisma.$queryRaw<Question[]>`
           SELECT * FROM "Question" 
@@ -198,7 +194,6 @@ export class QuizzesService {
       throw new BadRequestException('Quiz has no questions');
     }
 
-    // Calculate max possible score
     const maxScore = questions.reduce((total, q) => total + q.points, 0);
 
     // Create attempt
@@ -230,7 +225,6 @@ export class QuizzesService {
         type: q.type,
         options: q.options,
         points: q.points,
-        // Don't expose correct answers
       })),
       attempt: {
         id: attempt.id,
@@ -241,14 +235,13 @@ export class QuizzesService {
     };
   }
 
-  // ✅ Submit answer for a specific question (individual question answering)
+  // ✅ Submit answer for individual question
   async answerQuestion(
     attemptId: string,
     questionId: string,
     answer: any,
     timeSpent?: number,
   ) {
-    // Validate attempt exists and is active
     const attempt = await this.prisma.quizAttempt.findUnique({
       where: { id: attemptId },
       include: { quiz: true },
@@ -262,7 +255,6 @@ export class QuizzesService {
       throw new BadRequestException('Quiz attempt already completed');
     }
 
-    // Validate question belongs to this quiz
     const question = await this.prisma.question.findFirst({
       where: {
         id: questionId,
@@ -274,11 +266,9 @@ export class QuizzesService {
       throw new NotFoundException('Question not found in this quiz');
     }
 
-    // Calculate if answer is correct
     const isCorrect = this.checkAnswer(question, answer);
     const pointsEarned = isCorrect ? question.points : 0;
 
-    // Save/update response
     return this.prisma.quizResponse.upsert({
       where: {
         attemptId_questionId: { attemptId, questionId },
@@ -300,7 +290,7 @@ export class QuizzesService {
     });
   }
 
-  // ✅ Submit entire quiz with bulk answers (from standalone controller)
+  // ✅ Submit entire quiz with bulk answers
   async submitAttempt(attemptId: string, responses: any[]) {
     const attempt = await this.prisma.quizAttempt.findUnique({
       where: { id: attemptId },
@@ -353,24 +343,19 @@ export class QuizzesService {
       }
     }
 
-    // Finalize the attempt
     return this.finishAttempt(attemptId);
   }
 
-  // ✅ Finish quiz attempt and calculate final score
+  // ✅ Finish quiz attempt and calculate results
   async finishAttempt(attemptId: string) {
     const attempt = await this.prisma.quizAttempt.findUnique({
       where: { id: attemptId },
       include: {
         quiz: {
-          include: {
-            questions: true,
-          },
+          include: { questions: true },
         },
         responses: {
-          include: {
-            question: true,
-          },
+          include: { question: true },
         },
       },
     });
@@ -383,7 +368,6 @@ export class QuizzesService {
       throw new BadRequestException('Quiz attempt already completed');
     }
 
-    // Calculate final score
     const totalScore = attempt.responses.reduce(
       (sum, response) => sum + (response.pointsEarned || 0),
       0,
@@ -396,13 +380,11 @@ export class QuizzesService {
 
     const passed = scorePercentage >= attempt.quiz.passingScore;
 
-    // Calculate time spent
     const timeSpent = attempt.responses.reduce(
       (sum, response) => sum + (response.timeSpent || 0),
       0,
     );
 
-    // Update attempt with final results
     const completedAttempt = await this.prisma.quizAttempt.update({
       where: { id: attemptId },
       data: {
@@ -429,7 +411,6 @@ export class QuizzesService {
       },
     });
 
-    // Return comprehensive results
     return {
       attempt: {
         id: completedAttempt.id,
@@ -472,7 +453,7 @@ export class QuizzesService {
     };
   }
 
-  // ✅ Get detailed results for a completed attempt
+  // ✅ Get detailed results for completed attempt
   async getAttemptResults(attemptId: string, userId: string) {
     const attempt = await this.prisma.quizAttempt.findFirst({
       where: {
@@ -482,9 +463,7 @@ export class QuizzesService {
       include: {
         quiz: true,
         responses: {
-          include: {
-            question: true,
-          },
+          include: { question: true },
         },
       },
     });
@@ -500,7 +479,7 @@ export class QuizzesService {
     return this.formatAttemptResults(attempt);
   }
 
-  // ✅ Get user's quiz attempt history
+  // ✅ Get user's quiz history
   async getUserQuizHistory(userId: string, quizId?: string) {
     const where = quizId ? { userId, quizId } : { userId };
 

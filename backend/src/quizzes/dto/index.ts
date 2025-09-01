@@ -1,4 +1,3 @@
-// src/quizzes/dto/index.ts
 import {
   IsString,
   IsOptional,

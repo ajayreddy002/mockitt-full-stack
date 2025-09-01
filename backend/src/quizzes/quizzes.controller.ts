@@ -1,4 +1,3 @@
-// src/quizzes/quizzes.controller.ts
 import {
   Controller,
   Get,
@@ -32,7 +31,7 @@ import { SubmitQuizResponsesDto, SubmitAnswerDto } from './dto';
 export class QuizzesController {
   constructor(private readonly quizzesService: QuizzesService) {}
 
-  // ✅ Get quizzes for a specific module (from courses controller)
+  // ✅ Get quizzes for a specific module
   @Get('modules/:moduleId')
   @ApiOperation({ summary: 'Get all quizzes for a module' })
   @ApiParam({ name: 'moduleId', description: 'Module UUID' })
@@ -47,7 +46,7 @@ export class QuizzesController {
     return this.quizzesService.getModuleQuizzes(moduleId, req.user.id);
   }
 
-  // ✅ Get quiz by ID (from standalone controller)
+  // ✅ Get quiz by ID
   @Get(':id')
   @ApiOperation({ summary: 'Get quiz details by ID' })
   @ApiParam({ name: 'id', description: 'Quiz UUID' })
@@ -63,7 +62,7 @@ export class QuizzesController {
     return this.quizzesService.getQuizById(quizId, req.user.id);
   }
 
-  // ✅ Get user's attempts for a quiz (from standalone controller)
+  // ✅ Get user's attempts for a quiz
   @Get(':id/attempts')
   @ApiOperation({ summary: 'Get user attempts for a quiz' })
   @ApiParam({ name: 'id', description: 'Quiz UUID' })
@@ -78,7 +77,7 @@ export class QuizzesController {
     return this.quizzesService.getUserAttempts(req.user.id, quizId);
   }
 
-  // ✅ Start new quiz attempt (consolidated from both controllers)
+  // ✅ Start new quiz attempt
   @Post(':id/attempts')
   @ApiOperation({ summary: 'Start a new quiz attempt' })
   @ApiParam({ name: 'id', description: 'Quiz UUID' })
@@ -98,22 +97,16 @@ export class QuizzesController {
     return this.quizzesService.startAttempt(req.user.id, quizId);
   }
 
-  // ✅ Submit answer for individual question (from courses controller)
+  // ✅ Submit answer for individual question
   @Patch('attempts/:attemptId/questions/:questionId')
   @ApiOperation({ summary: 'Submit answer for a specific question' })
   @ApiParam({ name: 'attemptId', description: 'Quiz attempt UUID' })
   @ApiParam({ name: 'questionId', description: 'Question UUID' })
   @ApiResponse({ status: 200, description: 'Answer submitted successfully' })
-  @ApiResponse({
-    status: 400,
-    description: 'Quiz already completed or invalid answer',
-  })
-  @ApiResponse({ status: 404, description: 'Attempt or question not found' })
   async submitAnswer(
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
     @Param('questionId', ParseUUIDPipe) questionId: string,
     @Body() answerDto: SubmitAnswerDto,
-    // @Request() req,
   ) {
     return this.quizzesService.answerQuestion(
       attemptId,
@@ -123,13 +116,11 @@ export class QuizzesController {
     );
   }
 
-  // ✅ Submit entire quiz attempt (from standalone controller - bulk submission)
+  // ✅ Submit entire quiz attempt (bulk submission)
   @Post('attempts/:attemptId/submit')
   @ApiOperation({ summary: 'Submit entire quiz attempt with all answers' })
   @ApiParam({ name: 'attemptId', description: 'Quiz attempt UUID' })
   @ApiResponse({ status: 200, description: 'Quiz submitted successfully' })
-  @ApiResponse({ status: 400, description: 'Quiz already completed' })
-  @ApiResponse({ status: 404, description: 'Attempt not found' })
   @HttpCode(HttpStatus.OK)
   async submitBulkAttempt(
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
@@ -138,25 +129,21 @@ export class QuizzesController {
     return this.quizzesService.submitAttempt(attemptId, submitDto.responses);
   }
 
-  // ✅ Finish quiz attempt (from courses controller - finalize without bulk answers)
+  // ✅ Finish quiz attempt
   @Post('attempts/:attemptId/finish')
   @ApiOperation({ summary: 'Finish quiz attempt and calculate results' })
   @ApiParam({ name: 'attemptId', description: 'Quiz attempt UUID' })
   @ApiResponse({ status: 200, description: 'Quiz completed successfully' })
-  @ApiResponse({ status: 400, description: 'Quiz already completed' })
-  @ApiResponse({ status: 404, description: 'Attempt not found' })
   @HttpCode(HttpStatus.OK)
   async finishAttempt(@Param('attemptId', ParseUUIDPipe) attemptId: string) {
     return this.quizzesService.finishAttempt(attemptId);
   }
 
-  // ✅ Get quiz results (from standalone controller)
+  // ✅ Get quiz results
   @Get('attempts/:attemptId/results')
   @ApiOperation({ summary: 'Get detailed results for a completed attempt' })
   @ApiParam({ name: 'attemptId', description: 'Quiz attempt UUID' })
   @ApiResponse({ status: 200, description: 'Results retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Attempt not found' })
-  @ApiResponse({ status: 400, description: 'Quiz not yet completed' })
   async getAttemptResults(
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
     @Request() req,
