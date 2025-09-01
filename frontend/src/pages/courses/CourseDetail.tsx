@@ -139,15 +139,13 @@ export const CourseDetail: React.FC = () => {
     }
   }, [courseId, course, user?.isPremium, enrollInCourse]);
 
-  // ✅ FIXED: Memoize navigation handlers
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleQuizClick = useCallback((quizId: string) => {
-    if (!isEnrolled) {
-      alert('Please enroll in the course to take quizzes.');
-      return;
-    }
-    navigate(`/courses/${courseId}/quiz/${quizId}`);
-  }, [isEnrolled, navigate, courseId]);
+  // const handleQuizClick = useCallback((quizId: string) => {
+  //   if (!isEnrolled) {
+  //     alert('Please enroll in the course to take quizzes.');
+  //     return;
+  //   }
+  //   navigate(`/courses/${courseId}/quiz/${quizId}`);
+  // }, [isEnrolled, navigate, courseId]);
 
   const handleLessonClick = useCallback((lessonId: string) => {
     if (!isEnrolled) {

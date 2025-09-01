@@ -75,8 +75,7 @@ export const QuizTaking: React.FC = () => {
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
 
   // Auto-save individual answers flag
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [autoSaveEnabled] = useState(true);
 
   // Initialize quiz
   useEffect(() => {
