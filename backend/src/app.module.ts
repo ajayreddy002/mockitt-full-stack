@@ -22,6 +22,7 @@ import { AdminController } from './admin/admin.controller';
 import { AdminModule } from './admin/admin.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { LessonsController } from './lessons/lessons.controller';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { LessonsController } from './lessons/lessons.controller';
     QuizzesModule,
     AdminModule,
     LessonsModule,
+    AnalyticsModule,
   ],
   controllers: [
     AppController,

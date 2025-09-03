@@ -8,15 +8,15 @@ import {
   Clock,
   CheckCircle,
   Zap,
-  Target,
   Award,
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
-import { useAuth, useDashboard } from '../../store';
+import { useDashboard } from '../../store';
+import { PredictiveInsights } from './PredictiveInsights';
 
 export const DashboardOverview: React.FC = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
   // ✅ Use store instead of direct API calls
   const {
@@ -71,18 +71,16 @@ export const DashboardOverview: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Enhanced Welcome Header with Real Data */}
-      <div className="bg-white rounded-2xl shadow-xl p-8 bg-gradient-to-r from-white to-blue-50/30 relative overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl p-6 bg-gradient-to-r from-white to-blue-50/30 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="flex items-start justify-between">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
-                Welcome back, {user?.firstName}! 👋
-              </h1>
-              <p className="text-lg text-gray-600 mb-6">
-                Ready to boost your career with AI-powered preparation?
-              </p>
-              <div className="flex items-center space-x-4">
+              {/* <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+                Welcome back, {user?.firstName}!
+              </h1> */}
+              <PredictiveInsights />
+              {/* <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                   <Target className="h-4 w-4" />
                   <span>Career Ready: {stats?.careerReadiness || 0}%</span>
@@ -91,11 +89,9 @@ export const DashboardOverview: React.FC = () => {
                   <Zap className="h-4 w-4" />
                   <span>Premium Active</span>
                 </div>
-              </div>
+              </div> */}
             </div>
-
-            {/* Refresh Button */}
-            <button
+            {/* <button
               onClick={refreshDashboard}
               disabled={isLoading}
               className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -105,12 +101,25 @@ export const DashboardOverview: React.FC = () => {
               <span className="text-xs">
                 {lastUpdated ? `Updated ${new Date(lastUpdated).toLocaleTimeString()}` : 'Never'}
               </span>
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
 
       {/* Real Stats Grid */}
+      <div className='flex justify-end'>
+        <button
+          onClick={refreshDashboard}
+          disabled={isLoading}
+          className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+          title="Refresh Dashboard"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <span className="text-xs">
+            {lastUpdated ? `Updated ${new Date(lastUpdated).toLocaleTimeString()}` : 'Never'}
+          </span>
+        </button>
+      </div>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
@@ -149,7 +158,6 @@ export const DashboardOverview: React.FC = () => {
           <ProfessionalStatCard key={stat.name} stat={stat} index={index} />
         ))}
       </div>
-
       {/* Enhanced Quick Actions & Activity Grid */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Quick Actions with Real Data */}

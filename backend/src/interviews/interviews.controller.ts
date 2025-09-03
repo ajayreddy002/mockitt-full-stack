@@ -12,8 +12,9 @@ import {
   HttpCode,
   HttpStatus,
   ValidationPipe,
+  BadRequestException,
+  Request,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -23,13 +24,18 @@ import {
 import { InterviewsService } from './interviews.service';
 import { GetUser } from '../auth/get-user.decorator';
 import { User, InterviewType } from '@prisma/client';
+import { PredictiveAnalyticsService } from '../analytics/predictive-analytics.service';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @ApiTags('Interviews')
 @Controller('interviews')
-@UseGuards(AuthGuard('jwt'))
-@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
 export class InterviewsController {
-  constructor(private interviewsService: InterviewsService) {}
+  constructor(
+    private interviewsService: InterviewsService,
+    private predictiveAnalyticsService: PredictiveAnalyticsService,
+  ) {}
 
   @Post('sessions')
   @HttpCode(HttpStatus.CREATED)
@@ -166,5 +172,50 @@ export class InterviewsController {
       sessionId,
       batchData.responses,
     );
+  }
+  @Get('analytics/predictive')
+  @ApiOperation({ summary: 'Get predictive analytics for user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Predictive insights generated successfully',
+  })
+  async getPredictiveAnalytics(@Request() req) {
+    console.log(req, 'user:', req.user);
+    try {
+      const insights =
+        await this.predictiveAnalyticsService.generatePredictiveInsights(
+          req.user.id,
+        );
+
+      return {
+        success: true,
+        insights,
+        generatedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Failed to generate predictive analytics:', error);
+      throw new BadRequestException('Failed to generate analytics');
+    }
+  }
+
+  // ✅ NEW: Trend analysis endpoint
+  @Get('analytics/trends')
+  @ApiOperation({ summary: 'Get detailed trend analysis' })
+  async getTrendAnalysis(@Request() req) {
+    try {
+      const insights =
+        await this.predictiveAnalyticsService.generatePredictiveInsights(
+          req.user.id,
+        );
+
+      return {
+        success: true,
+        trends: insights.trends,
+        recommendations: insights.recommendations,
+      };
+    } catch (error) {
+      console.error('Failed to get trend analysis:', error);
+      throw new BadRequestException('Failed to get trend analysis');
+    }
   }
 }

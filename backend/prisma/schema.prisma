@@ -31,6 +31,7 @@ model User {
   CourseReview         CourseReview[]
   lessonProgress       LessonProgress[]
   lessonNotes          UserLessonNotes[]
+  speechAnalyses       SpeechAnalysis[]
 
   @@map("users")
 }
@@ -144,6 +145,7 @@ model InterviewSession {
   userId    String
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   responses InterviewResponse[]
+  speechAnalyses SpeechAnalysis[]
 
   @@map("interview_sessions")
 }
@@ -456,6 +458,25 @@ model CourseReview {
   @@unique([userId, courseId])
 
   @@map("course_reviews")
+}
+
+model SpeechAnalysis {
+  id           String   @id @default(cuid())
+  sessionId    String   @map("session_id")
+  userId       String   @map("user_id")
+  metrics      Json     // Stores speech metrics as JSON
+  feedback     String[] // Array of feedback messages
+  improvements String[] @default([]) // Array of improvement suggestions
+  overallScore Int      @map("overall_score")
+  transcription String?  // Optional transcription
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  session InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("speech_analysis")
 }
 
 // Enums

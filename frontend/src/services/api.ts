@@ -524,6 +524,17 @@ export const mockittAPI = {
       return response.data;
     },
   },
+  analytics: {
+    getPredictiveInsights: async () => {
+      const response = await api.get('/interviews/analytics/predictive');
+      return response.data;
+    },
+
+    getTrendAnalysis: async () => {
+      const response = await api.get('/interviews/analytics/trends');
+      return response.data;
+    },
+  },
 };
 
 export default api;
