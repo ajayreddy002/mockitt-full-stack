@@ -25,7 +25,8 @@ import { InterviewsService } from './interviews.service';
 import { GetUser } from '../auth/get-user.decorator';
 import { User, InterviewType } from '@prisma/client';
 import { PredictiveAnalyticsService } from '../analytics/predictive-analytics.service';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { IntelligentCoachingService } from '../ai/intelligent-coaching.service';
 
 @ApiTags('Interviews')
 @Controller('interviews')
@@ -35,6 +36,7 @@ export class InterviewsController {
   constructor(
     private interviewsService: InterviewsService,
     private predictiveAnalyticsService: PredictiveAnalyticsService,
+    private intelligentCoachingService: IntelligentCoachingService,
   ) {}
 
   @Post('sessions')
@@ -198,7 +200,6 @@ export class InterviewsController {
     }
   }
 
-  // ✅ NEW: Trend analysis endpoint
   @Get('analytics/trends')
   @ApiOperation({ summary: 'Get detailed trend analysis' })
   async getTrendAnalysis(@Request() req) {
@@ -216,6 +217,64 @@ export class InterviewsController {
     } catch (error) {
       console.error('Failed to get trend analysis:', error);
       throw new BadRequestException('Failed to get trend analysis');
+    }
+  }
+  @Post('sessions/:sessionId/smart-coaching')
+  @ApiOperation({ summary: 'Get smart coaching for interview question' })
+  async getSmartCoaching(
+    @Param('sessionId') sessionId: string,
+    @Body('question') question: string,
+    @Body('userProfile') userProfile: any,
+    @Body('speechMetrics') speechMetrics?: any,
+    @Body('currentAnswer') currentAnswer?: string,
+  ) {
+    try {
+      const coaching =
+        await this.intelligentCoachingService.generateSmartCoaching(
+          question,
+          userProfile,
+          speechMetrics,
+          currentAnswer,
+        );
+
+      return {
+        success: true,
+        coaching,
+        sessionId,
+      };
+    } catch (error) {
+      console.error('Smart coaching failed:', error);
+      throw new BadRequestException('Failed to generate coaching');
+    }
+  }
+
+  // ✅ NEW: Live coaching during speech
+  @Post('sessions/:sessionId/live-coaching')
+  @ApiOperation({ summary: 'Get real-time coaching during speech' })
+  async getLiveCoaching(
+    @Param('sessionId') sessionId: string,
+    @Body('speechMetrics') speechMetrics: any,
+    @Body('questionContext') questionContext: any,
+    @Body('speakingDuration') speakingDuration: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Request() req,
+  ) {
+    try {
+      const liveCoaching =
+        await this.intelligentCoachingService.generateLiveCoaching(
+          speechMetrics,
+          questionContext,
+          speakingDuration,
+        );
+
+      return {
+        success: true,
+        insights: liveCoaching,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Live coaching failed:', error);
+      throw new BadRequestException('Failed to get live coaching');
     }
   }
 }

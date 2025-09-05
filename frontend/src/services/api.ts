@@ -34,7 +34,7 @@ api.interceptors.response.use(
       // Clear token and redirect to login
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      if(window.location.pathname !== '/login') window.location.href = '/login';
+      if (window.location.pathname !== '/login') window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -140,6 +140,24 @@ export const mockittAPI = {
       const response = await api.post(`/interviews/sessions/${sessionId}/responses/batch`, {
         responses
       });
+      return response.data;
+    },
+    getSmartCoaching: async (sessionId: string, data: {
+      question: string;
+      userProfile?: any;
+      speechMetrics?: any;
+      currentAnswer?: string;
+    }) => {
+      const response = await api.post(`/interviews/sessions/${sessionId}/smart-coaching`, data);
+      return response.data;
+    },
+
+    getLiveCoaching: async (sessionId: string, data: {
+      speechMetrics: any;
+      questionContext: any;
+      speakingDuration: number;
+    }) => {
+      const response = await api.post(`/interviews/sessions/${sessionId}/live-coaching`, data);
       return response.data;
     },
   },
@@ -262,7 +280,7 @@ export const mockittAPI = {
       const response = await api.get('/courses/enrollments');
       return response.data;
     },
-  
+
     getMyEnrolledCourses: async () => {
       const response = await api.get('/courses/my-courses');
       return response.data;

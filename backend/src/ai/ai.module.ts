@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
 import { PrismaModule } from 'prisma/prisma.module'; // Import your Prisma module
+import { IntelligentCoachingService } from './intelligent-coaching.service';
 
 @Module({
   imports: [
@@ -10,7 +11,7 @@ import { PrismaModule } from 'prisma/prisma.module'; // Import your Prisma modul
     PrismaModule, // Add PrismaModule to imports
   ],
   controllers: [AiController],
-  providers: [AiService],
-  exports: [AiService],
+  providers: [AiService, IntelligentCoachingService],
+  exports: [AiService, IntelligentCoachingService],
 })
 export class AiModule {}

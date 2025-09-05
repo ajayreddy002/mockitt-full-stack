@@ -11,7 +11,11 @@ interface SpeechMetrics {
   suggestions: string[];
 }
 
-export const RealTimeSpeechAnalyzer: React.FC = () => {
+interface RealTimeSpeechAnalyzerProps {
+  onSpeechMetricsUpdate?: (metrics: SpeechMetrics) => void; // ✅ NEW
+}
+
+export const RealTimeSpeechAnalyzer: React.FC<RealTimeSpeechAnalyzerProps> = ({onSpeechMetricsUpdate}) => {
   const { generateRealTimeAnalysis, currentSession } = useInterview();
   const { addNotification } = useUI();
 
@@ -164,6 +168,15 @@ export const RealTimeSpeechAnalyzer: React.FC = () => {
     checkVolume();
   };
 
+  const updateMetrics = (newMetrics: SpeechMetrics) => {
+    setLiveMetrics(newMetrics);
+    
+    // ✅ NEW: Share metrics with parent
+    if (onSpeechMetricsUpdate) {
+      onSpeechMetricsUpdate(newMetrics);
+    }
+  };
+
   // ✅ Process transcription with backend AI analysis
   const processTranscription = useCallback(async (transcription: string) => {
     if (!transcription || transcription.length < 20 || !currentSession) return;
@@ -183,6 +196,15 @@ export const RealTimeSpeechAnalyzer: React.FC = () => {
           fillerWords: analysis.data.fillerWords || prev.fillerWords,
           suggestions: analysis.data.suggestions || []
         }));
+        const newMetrics = {
+          pace: analysis.data.pace || liveMetrics.pace,
+          clarity: analysis.data.clarity || liveMetrics.clarity,
+          confidence: analysis.data.confidence || liveMetrics.confidence,
+          fillerWords: analysis.data.fillerWords || liveMetrics.fillerWords,
+          volume: liveMetrics.volume,
+          suggestions: analysis.data.suggestions || []
+        };
+        updateMetrics(newMetrics);
 
         // Show coaching tips
         // if (analysis.data.suggestions && analysis.data.suggestions.length > 0) {
@@ -196,6 +218,7 @@ export const RealTimeSpeechAnalyzer: React.FC = () => {
     } catch (error) {
       console.error('Real-time analysis failed:', error);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generateRealTimeAnalysis, currentSession]);
 
   // ✅ Process transcription updates

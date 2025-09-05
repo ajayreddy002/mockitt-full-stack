@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useInterview, useUI } from '../../store';
+import { useAuth, useInterview, useUI } from '../../store';
 import { InterviewAnswerRecorder } from '../../components/interview/InterviewAnswerRecorder';
 import { RealTimeSpeechAnalyzer } from '../../components/interview/RealTimeSpeechAnalyzer';
 import { InterviewSessionHeader } from '../../components/interview/InterviewSessionHeader';
@@ -10,6 +10,7 @@ import { InterviewReadyScreen } from '../../components/interview/InterviewReadyS
 import { ProfessionalButton } from '../../components/common/ProfessionalButton';
 import { ChevronLeft, ChevronRight, Square } from 'lucide-react';
 import { LoadingOverlay } from '../../components/common/LoadingOverlay';
+import { SmartCoachingPanel } from '../../components/interview/SmartCoachingPanel';
 
 export const InterviewSessionPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -19,11 +20,13 @@ export const InterviewSessionPage: React.FC = () => {
     nextQuestion, previousQuestion, savePendingResponse, submitAllResponses
   } = useInterview();
   const { addNotification } = useUI();
+  const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [startingInterview, setStartingInterview] = useState(false);
   const [endingInterview, setEndingInterview] = useState(false);
   const [endingProgress, setEndingProgress] = useState(0);
+  const [speechMetrics, setSpeechMetrics] = useState<any | null>(null);
 
   useEffect(() => {
     const initializeSession = async () => {
@@ -42,7 +45,7 @@ export const InterviewSessionPage: React.FC = () => {
       }
     };
     initializeSession();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, getSession]);
 
   const handleStartInterview = async () => {
@@ -124,6 +127,10 @@ export const InterviewSessionPage: React.FC = () => {
     nextQuestion();
   };
 
+  const handleSpeechMetricsUpdate = (metrics: any) => {
+    setSpeechMetrics(metrics);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -176,13 +183,24 @@ export const InterviewSessionPage: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
+
           {/* Main Interview Area */}
           <div className="lg:col-span-3 space-y-6">
-            
+
             {/* ✅ Real-time speech analysis - no toast notifications */}
-            <RealTimeSpeechAnalyzer />
-            
+            <RealTimeSpeechAnalyzer onSpeechMetricsUpdate={handleSpeechMetricsUpdate} />
+
+            <SmartCoachingPanel
+              sessionId={currentSession?.id || ''}
+              currentQuestion={currentQuestion.question}
+              isRecording={speechMetrics ? true : false} // Based on metrics availability
+              speechMetrics={speechMetrics}
+              userProfile={user}
+              onCoachingReceived={(insights) => {
+                console.log('Smart coaching insights:', insights);
+              }}
+            />
+
             {/* Enhanced Question Display */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
               <div className="flex items-center justify-between mb-6">
@@ -198,7 +216,7 @@ export const InterviewSessionPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              
+
               <h2 className="text-2xl font-semibold text-gray-900 mb-6 leading-relaxed">
                 {currentQuestion.question}
               </h2>
